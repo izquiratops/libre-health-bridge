@@ -1,0 +1,2 @@
+"NSHealthShareUsageDescription" = "Consultar solo las muestras de glucosa guardadas por esta app para evitar duplicados. No se solicitan otros datos de Salud.";
+"NSHealthUpdateUsageDescription" = "Guardar tus lecturas del sensor de LibreLinkUp en Glucosa en sangre de Salud con su hora original de medición.";

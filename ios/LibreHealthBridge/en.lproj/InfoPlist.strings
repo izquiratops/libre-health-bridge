@@ -1,0 +1,2 @@
+"NSHealthShareUsageDescription" = "Check only glucose samples this app wrote to prevent duplicate imports. No other Health data is requested.";
+"NSHealthUpdateUsageDescription" = "Save your LibreLinkUp sensor readings to Apple Health's Blood Glucose category with their original measurement times.";
