@@ -1,0 +1,10 @@
+{
+  "actions": {
+    "run": {
+      "enabled": true,
+      "scripting": "shell",
+      "script": "bash ios/DesignReview/nova-task.sh design-review"
+    }
+  },
+  "openLogOnRun": "success"
+}

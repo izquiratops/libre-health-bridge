@@ -62,31 +62,29 @@ xcodebuild \
 
 An unsigned simulator build can launch but fail Keychain access because it lacks application-identity entitlements. Ad-hoc simulator signing needs no physical-device certificate.
 
-In this Xcode installation, **DeviceHub** provides the simulator window. The app is at `/Applications/Xcode.app/Contents/Applications/DeviceHub.app`.
+In this Xcode installation, **DeviceHub** provides the simulator window instead of `Simulator.app`. The Nova run task detects either app under the selected Xcode installation. Here, DeviceHub is at `/Applications/Xcode.app/Contents/Applications/DeviceHub.app`.
 
 ## First import
 
 1. Log in with your LibreLinkUp credentials.
 2. Tap **Set up Health import**.
-3. In **Health profile and permissions**, select your own profile from the dropdown.
-4. In the setup sheet, compare the glucose value and measurement time with LibreLinkUp.
-5. Confirm that the readings belong to you and match LibreLinkUp.
-6. Tap **Continue and sync**.
-7. Allow the Blood Glucose write permission.
+3. In the Health setup sheet, select your own profile.
+4. Compare the glucose value and measurement time with LibreLinkUp.
+5. Turn on **Confirm this reading is mine** after comparing the value and time. Turn it off to withdraw confirmation.
+6. Allow the Blood Glucose write permission in the setup sheet.
+7. Tap **Confirm**.
 8. Open Health and find **Blood Glucose → Show All Data**.
 9. Compare the imported values, times, and app source with LibreLinkUp.
-10. Tap **Sync with Apple Health**.
+10. Tap **Sync with Apple Health** for another manual import.
 11. Make sure that existing readings do not appear twice.
 
-If you deny access, enable Blood Glucose writes in Health. Then return to the app and tap the sync button again.
+If you deny access, enable Blood Glucose writes in Health. Then return to the setup sheet and tap **Confirm**.
 
 The app converts `FactoryTimestamp` from UTC. It shows measurement times in the phone's time zone.
 
-The bottom bar has **Home**, **Details**, and **Information** tabs. Home contains the account and Health cards. Their detail buttons open the corresponding section in Details.
+The bottom bar has **Home** and **Information** tabs. Home shows the connection, Health status, and last completed sync time. Information shows the safety warning, privacy information, and app version.
 
-Details shows download data and statistics for the last completed Health import. The Health section appears only after a completed import. Information contains the safety warning, privacy information, and app version. All views follow the system light or dark appearance.
-
-The profile dropdown is in **Health profile and permissions**. The **Change profile or permissions** button opens this configuration from Home or the Health details. A profile change clears the local sync status and requires confirmation of your readings before another import. Existing Health samples remain unchanged.
+Tap **Stop synchronization** on Home before you open the Health setup sheet. The sheet shows why sync stopped. A missing profile or disabled Health permission also stops sync. Select a profile and enable permission in the sheet. Then tap **Confirm** to resume. A profile change clears the local sync status. Existing Health samples remain unchanged.
 
 The importer excludes malformed, future-dated, and range-flagged readings. It does not turn high or low range flags into exact values.
 
@@ -95,13 +93,12 @@ The importer excludes malformed, future-dated, and range-flagged readings. It do
 - Regional login and one authentication retry after HTTP 401.
 - Device-only Keychain storage for credentials, selected connection, confirmation, and sync status.
 - A profile dropdown with selection by stable patient identifier. Logout is required to change accounts.
-- Status cards and a Details tab with download data and Health import statistics.
+- Status cards on Home with the connection, Health status, and last completed sync time.
 - A download preview in `mg/dL` or `mmol/L`.
 - A setup sheet for profile selection, reading confirmation, and Health permissions.
 - Manual import of the latest reading and available history.
 - Original measurement times and interstitial-source metadata.
-- Counts for new, corrected, existing, and skipped readings.
-- Last successful fetch, completed sync, and actual Health write times.
+- The time of the last completed sync on Home.
 - Logout that removes saved credentials and local status.
 
 No Health import occurs at login or app launch. The app imports only after you tap the sync button. The interface supports English and Spanish.
@@ -140,7 +137,7 @@ Screenshots, device diagnostics, and Apple's services are outside this app's con
 
 Rate limits and network failures stop the operation without an automatic retry loop. Terms acceptance requires the official LibreLinkUp app.
 
-If Health is locked or unavailable, the app shows an error. A failed save does not produce a success report.
+If Health is locked or unavailable, the app shows an error. A failed save does not update the last completed sync time.
 
 A completed Health permission sheet does not prove authorization. The app checks glucose write permission before importing.
 
@@ -179,7 +176,7 @@ This command verifies compilation, not installation or HealthKit behavior. Real 
 - First import: expected samples and original times in Health.
 - Repeated import: no duplicate samples.
 - App restart: duplicate prevention still works.
-- Network failure: no stale preview import and no false success report.
+- Network failure: no stale preview import and no false sync success message.
 - Revoked Health permission: no import.
 - Logout: no stored login, but existing Health samples remain.
 
