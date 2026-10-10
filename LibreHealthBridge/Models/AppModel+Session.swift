@@ -3,13 +3,6 @@ import Foundation
 
 extension AppModel {
     func restore() async {
-        // Restore fixture preview data instead of reading a saved session or contacting the cloud.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil {
-                await installFixturePreview()
-                return
-            }
-        #endif
         guard restoration == .idle || restoration == .retryableFailure else {
             return
         }
@@ -25,10 +18,6 @@ extension AppModel {
     }
 
     func login(email: String, password: String) async -> Bool {
-        // Fixture screens do not perform real authentication or persist credentials.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return false }
-        #endif
         return await perform {
             let credentials = Credentials(email: email, password: password)
             guard !credentials.email.isEmpty, !password.isEmpty else {
@@ -59,10 +48,6 @@ extension AppModel {
 
     // Switching profiles clears verification and local status, never existing Health samples.
     func selectConnection(_ id: String) async {
-        // Keep the selected profile in a fixture scenario fixed.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return }
-        #endif
         _ = await perform {
             guard var saved = session, saved.selectedPatientID != id else {
                 return
@@ -83,10 +68,6 @@ extension AppModel {
     }
 
     func refresh() async {
-        // Avoid replacing synthetic fixture data with a real cloud refresh.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return }
-        #endif
         guard isSignedIn else {
             if restoration == .retryableFailure { await restore() }
             return
@@ -97,10 +78,6 @@ extension AppModel {
     }
 
     func logout() async {
-        // Preserve the fixture state; there is no real session to log out of.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return }
-        #endif
         _ = await perform {
             // Clear the UI only after deletion succeeds, so failure cannot hide retained credentials.
             try sessionStore.delete()

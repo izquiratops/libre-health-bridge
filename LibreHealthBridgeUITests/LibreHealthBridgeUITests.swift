@@ -70,6 +70,49 @@ final class LibreHealthBridgeUITests: XCTestCase {
     }
 
     @MainActor
+    func testConfirmationPermissionThenExplicitImport() {
+        let app = launch(scenario: "setup", screen: "setup")
+        let confirmation = app.switches["health.setup.confirm"]
+        XCTAssertTrue(confirmation.waitForExistence(timeout: 10))
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"), object: confirmation)], timeout: 10), .completed)
+        XCTAssertFalse(app.buttons["health.setup.sync"].isEnabled)
+        // The outer Form row is also exposed as a switch. Tap its trailing control,
+        // not the row's midpoint (which does not toggle on iOS 27).
+        confirmation.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.5)).tap()
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "1"), object: confirmation)], timeout: 5), .completed)
+        screenshot(app, named: "after-confirmation")
+        let permission = app.buttons["Allow Health access"]
+        XCTAssertTrue(permission.waitForExistence(timeout: 5))
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"), object: permission)], timeout: 10), .completed)
+        // Health access sits below the pinned import action on a compact sheet.
+        app.swipeUp()
+        XCTAssertTrue(permission.isHittable)
+        permission.tap()
+        XCTAssertTrue(app.staticTexts["Allowed"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["health.setup.sync"].waitForExistence(timeout: 5))
+        let importButton = app.buttons["health.setup.sync"]
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"), object: importButton)], timeout: 10), .completed)
+        importButton.tap()
+        XCTAssertTrue(app.buttons["health.stop"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Last completed sync"].exists)
+    }
+
+    @MainActor
+    func testFailureOnActualImport() {
+        let app = launch(scenario: "health-save")
+        XCTAssertTrue(app.alerts["Action needed"].waitForExistence(timeout: 5))
+        app.buttons["Dismiss"].tap()
+        app.buttons["health.sync"].tap()
+        XCTAssertTrue(app.alerts["Action needed"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Health import did not finish")).firstMatch.exists)
+        XCTAssertFalse(app.alerts["Sync complete"].exists)
+    }
+
+    @MainActor
     func testStopBeforeOpeningHealthSetup() {
         let app = launch(scenario: "ready")
         XCTAssertFalse(app.buttons["profile.select"].exists)
@@ -156,7 +199,9 @@ final class LibreHealthBridgeUITests: XCTestCase {
             if scenario == "health-unavailable" {
                 XCTAssertFalse(app.buttons["Open Health to enable access"].exists)
             } else {
-                XCTAssertTrue(app.buttons["Open Health to enable access"].exists)
+                let openHealth = app.buttons["Open Health to enable access"]
+                if !openHealth.exists { app.swipeUp() }
+                XCTAssertTrue(openHealth.waitForExistence(timeout: 5))
             }
             screenshot(app, named: "blocked-\(scenario)-setup")
             app.terminate()
@@ -175,6 +220,28 @@ final class LibreHealthBridgeUITests: XCTestCase {
         XCTAssertEqual(app.switches["health.setup.confirm"].value as? String, "1")
         XCTAssertTrue(app.staticTexts["Synchronization stopped"].exists)
         screenshot(app, named: "paused-setup")
+        app.buttons["health.setup.sync"].tap()
+        XCTAssertTrue(app.buttons["health.stop"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Synchronization stopped"].exists)
+    }
+
+    @MainActor
+    func testLoginAndLogoutUseSyntheticAdapters() {
+        let app = launch(scenario: "signed-out", screen: "login")
+        let email = app.textFields["login.email"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        email.tap()
+        email.typeText("alex@example.invalid")
+        let password = app.secureTextFields["login.password"]
+        password.tap()
+        password.typeText("synthetic-password")
+        app.buttons["login.submit"].tap()
+        XCTAssertTrue(app.buttons["account.logout"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["health.stop"].exists, "Login cannot import or start sync")
+        app.buttons["account.logout"].tap()
+        XCTAssertTrue(app.alerts["Log out?"].waitForExistence(timeout: 5))
+        app.alerts.buttons["Log out"].tap()
+        XCTAssertTrue(app.buttons["login.open"].waitForExistence(timeout: 10))
     }
 
     @MainActor

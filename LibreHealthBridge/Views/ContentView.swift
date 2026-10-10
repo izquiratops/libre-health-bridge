@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum AppTab: Hashable {
+enum AppTab: Hashable {
     case home, information
 }
 
@@ -62,36 +62,3 @@ struct ContentView: View {
             }
     }
 }
-
-#if DEBUG && targetEnvironment(simulator)
-    private struct SimulatorLaunchRouting: ViewModifier {
-        @Binding var selectedTab: AppTab
-        @Binding var showLogin: Bool
-        @Binding var showSetup: Bool
-        @State private var didRouteLaunch = false
-
-        func body(content: Content) -> some View {
-            content.onAppear(perform: routeLaunchScreen)
-        }
-
-        private func routeLaunchScreen() {
-            guard !didRouteLaunch else { return }
-            didRouteLaunch = true
-            let arguments = ProcessInfo.processInfo.arguments
-            guard let index = arguments.firstIndex(of: "--ui-screen"),
-                arguments.indices.contains(index + 1)
-            else { return }
-            switch arguments[index + 1] {
-            case "home": selectedTab = .home
-            case "information": selectedTab = .information
-            case "login":
-                selectedTab = .home
-                showLogin = true
-            case "setup":
-                selectedTab = .home
-                showSetup = true
-            default: break
-            }
-        }
-    }
-#endif

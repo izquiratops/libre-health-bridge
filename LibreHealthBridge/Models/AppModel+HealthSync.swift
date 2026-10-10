@@ -4,10 +4,6 @@ import Foundation
 extension AppModel {
     @discardableResult
     func confirmPreview() async -> Bool {
-        // Fixture data is for display only and cannot verify a real patient profile.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return false }
-        #endif
         return await perform {
             guard var saved = session, let id = saved.selectedPatientID,
                 isPreviewCurrent, snapshot?.patientID == id,
@@ -21,9 +17,6 @@ extension AppModel {
 
     @discardableResult
     func revokePreviewConfirmation() async -> Bool {
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return false }
-        #endif
         return await perform {
             guard var saved = session, saved.verifiedPatientID != nil else { return }
             saved.verifiedPatientID = nil
@@ -35,10 +28,6 @@ extension AppModel {
 
     @discardableResult
     func authorizeHealth() async -> Bool {
-        // Do not request real HealthKit authorization while showing a fixture.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return false }
-        #endif
         return await perform {
             guard isVerified else { throw LocalError.validationRequired }
             defer { refreshHealthAccess() }
@@ -48,13 +37,6 @@ extension AppModel {
 
     @discardableResult
     func stopHealthSync() async -> Bool {
-        // Update the fixture's displayed pause state without persisting a session.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil {
-                session?.syncPaused = true
-                return true
-            }
-        #endif
         return await perform {
             guard var saved = session else { return }
             saved.syncPaused = true
@@ -65,10 +47,6 @@ extension AppModel {
 
     @discardableResult
     func sync(starting: Bool = false) async -> OperationOutcome {
-        // Never write synthetic readings to HealthKit.
-        #if DEBUG && targetEnvironment(simulator)
-            if fixtureScenario != nil { return .cancelled }
-        #endif
         let result = await perform {
             guard isVerified else { throw LocalError.validationRequired }
             guard starting || session?.syncPaused == false else {

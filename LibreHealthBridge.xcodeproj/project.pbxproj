@@ -26,6 +26,8 @@
 		A00000000000000000000012 /* AppModel+HealthSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001B /* AppModel+HealthSync.swift */; };
 		A10000000000000000000001 /* LibreHealthBridgeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* LibreHealthBridgeUITests.swift */; };
 		A20000000000000000000001 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppModelTests.swift */; };
+		A00000000000000000000013 /* SimulatorScenarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001C /* SimulatorScenarios.swift */; };
+		A20000000000000000000003 /* SimulatorScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* SimulatorScenarioTests.swift */; };
 		A20000000000000000000002 /* BridgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000002 /* BridgeCore */; };
 /* End PBXBuildFile section */
 
@@ -71,6 +73,8 @@
 		F10000000000000000000001 /* LibreHealthBridgeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibreHealthBridgeUITests.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* LibreHealthBridgeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LibreHealthBridgeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F20000000000000000000001 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		F0000000000000000000001C /* SimulatorScenarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorScenarios.swift; sourceTree = "<group>"; };
+		F20000000000000000000003 /* SimulatorScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorScenarioTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 /* LibreHealthBridgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LibreHealthBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -108,6 +112,7 @@
 			isa = PBXGroup;
 			children = (
 				F00000000000000000000001 /* LibreHealthBridgeApp.swift */,
+				F0000000000000000000001C /* SimulatorScenarios.swift */,
 				C00000000000000000000004 /* Views */,
 				C00000000000000000000005 /* Models */,
 				F00000000000000000000004 /* KeychainStore.swift */,
@@ -167,6 +172,7 @@
 			isa = PBXGroup;
 			children = (
 				F20000000000000000000001 /* AppModelTests.swift */,
+				F20000000000000000000003 /* SimulatorScenarioTests.swift */,
 			);
 			path = LibreHealthBridgeTests;
 			sourceTree = "<group>";
@@ -314,6 +320,7 @@
 				A00000000000000000000011 /* AppModel+Session.swift in Sources */,
 				A00000000000000000000012 /* AppModel+HealthSync.swift in Sources */,
 				A00000000000000000000003 /* AppModel.swift in Sources */,
+				A00000000000000000000013 /* SimulatorScenarios.swift in Sources */,
 				A00000000000000000000004 /* KeychainStore.swift in Sources */,
 				A00000000000000000000005 /* HealthWriter.swift in Sources */,
 			);
@@ -332,6 +339,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A20000000000000000000001 /* AppModelTests.swift in Sources */,
+				A20000000000000000000003 /* SimulatorScenarioTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
