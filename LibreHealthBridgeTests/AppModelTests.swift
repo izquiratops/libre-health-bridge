@@ -46,6 +46,8 @@ private actor FixtureTransport: CloudTransport {
     var emptyConnections = false
     var failGraph = false
     var holdGraph = false
+    var glucoseValue = 108
+    func setGlucoseValue(_ value: Int) { glucoseValue = value }
     private var pending: CheckedContinuation<Void, any Error>?
     func setConnectionsFailure(_ value: Bool) { failConnections = value }
     func setEmptyConnections(_ value: Bool) { emptyConnections = value }
@@ -67,7 +69,12 @@ private actor FixtureTransport: CloudTransport {
         case "/llu/connections":
             if failConnections { throw CloudError.network }
             body = emptyConnections ? #"{"status":0,"data":[]}"# :
-                #"{"status":0,"data":[{"patientId":"patient-a","firstName":"Alex","glucoseMeasurement":{"FactoryTimestamp":"10/6/2026 6:30:00 AM","ValueInMgPerDl":108,"isHigh":false,"isLow":false}},{"patientId":"patient-b","firstName":"Blair"}]}"#
+                """
+                {"status":0,"data":[{"patientId":"patient-a","firstName":"Alex",\
+                "glucoseMeasurement":{"FactoryTimestamp":"02/18/2026 11:55:00 AM",\
+                "ValueInMgPerDl":\(glucoseValue),"isHigh":false,"isLow":false}},\
+                {"patientId":"patient-b","firstName":"Blair"}]}
+                """
         case "/llu/connections/patient-a/graph", "/llu/connections/patient-b/graph":
             if holdGraph { try await withCheckedThrowingContinuation { pending = $0 } }
             if failGraph { throw CloudError.network }
@@ -80,7 +87,7 @@ private actor FixtureTransport: CloudTransport {
 }
 
 @MainActor
-private func model(_ store: MemoryStore, _ health: FakeWriter, _ transport: FixtureTransport) -> AppModel {
+private func model(_ store: MemoryStore, _ health: any GlucoseWriter, _ transport: FixtureTransport) -> AppModel {
     AppModel(sessionStore: store, health: health,
              makeClient: { LibreCloudClient(credentials: $0, transport: transport) })
 }
@@ -102,6 +109,138 @@ private final class FakeHealthStore: GlucoseHealthStore {
         return []
     }
     func save(_ samples: [HKQuantitySample]) async throws { saves += 1 }
+}
+
+// Mimics only the store behavior the writer relies on: queries return committed samples,
+// and a higher sync version replaces the previous sample for that identifier.
+// This is not a simulation of HealthKit authorization, queries, or save semantics.
+@MainActor
+private final class RecordingHealthStore: GlucoseHealthStore {
+    let access: HealthAccess = .authorized
+    private(set) var samples: [String: HKQuantitySample] = [:]
+    private(set) var saveAttempts = 0
+    var failSave = false
+    func authorize() async throws { }
+    func existingSamples(for readings: [GlucoseReading]) async throws -> [StoredReading] {
+        let ids = Set(readings.map(\.id))
+        let unit = HKUnit(from: "mg/dL")
+        return samples.compactMap { id, sample in
+            guard ids.contains(id),
+                  let version = sample.metadata?[HKMetadataKeySyncVersion] as? Int else { return nil }
+            return StoredReading(id: id, valueMgDl: sample.quantity.doubleValue(for: unit), version: version)
+        }
+    }
+    func save(_ writes: [HKQuantitySample]) async throws {
+        saveAttempts += 1
+        if failSave { throw HealthError.save }
+        var next = samples
+        for sample in writes {
+            guard let id = sample.metadata?[HKMetadataKeySyncIdentifier] as? String,
+                  let version = sample.metadata?[HKMetadataKeySyncVersion] as? Int else {
+                throw HealthError.save
+            }
+            let previousVersion = next[id]?.metadata?[HKMetadataKeySyncVersion] as? Int ?? 0
+            if version > previousVersion { next[id] = sample }
+        }
+        samples = next
+    }
+}
+
+@Test @MainActor func firstImportSavesGlucoseSampleWithIdentityAndMetadata() async throws {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a")
+    let backend = RecordingHealthStore()
+    let app = model(store, HealthWriter(backend: backend), FixtureTransport())
+    await app.restore()
+
+    #expect(await app.sync() == .success)
+    let sample = try #require(backend.samples.values.first)
+    #expect(backend.samples.count == 1)
+    #expect(sample.quantity.doubleValue(for: HKUnit(from: "mg/dL")) == 108)
+    let measurementTime = Date(timeIntervalSince1970: 1_771_415_700) // 2026-02-18 11:55:00 UTC
+    #expect(sample.startDate == measurementTime)
+    #expect(sample.endDate == measurementTime)
+    let identity = "libre-health-bridge.v1.7b29ea7cc5eb6c66bc76a17446b7dd28ee894491aed81b16fad2224d89893362"
+    #expect(sample.metadata?[HKMetadataKeySyncIdentifier] as? String == identity)
+    #expect(sample.metadata?[HKMetadataKeySyncVersion] as? Int == 1)
+    #expect(sample.metadata?[HKMetadataKeyWasUserEntered] as? Bool == false)
+    #expect(sample.metadata?["org.librehealthbridge.source"] as? String == "LibreLinkUp cloud import")
+    #expect(sample.metadata?["org.librehealthbridge.measurementKind"] as? String == "Interstitial glucose")
+    #expect(backend.saveAttempts == 1)
+    #expect(store.saved?.lastSync != nil)
+}
+
+@Test @MainActor func repeatedImportKeepsOneStoredReadingWithoutSavingAgain() async throws {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a")
+    let backend = RecordingHealthStore()
+    let app = model(store, HealthWriter(backend: backend), FixtureTransport())
+    await app.restore()
+    #expect(await app.sync() == .success)
+    let first = try #require(backend.samples.values.first)
+
+    #expect(await app.sync() == .success)
+    #expect(backend.samples.count == 1)
+    #expect(backend.saveAttempts == 1)
+    #expect(backend.samples.values.first?.uuid == first.uuid)
+    #expect(backend.samples.values.first?.metadata?[HKMetadataKeySyncVersion] as? Int == 1)
+}
+
+@Test @MainActor func correctedCloudReadingReplacesStoredSampleAtNextVersion() async throws {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a")
+    let backend = RecordingHealthStore()
+    let transport = FixtureTransport()
+    let app = model(store, HealthWriter(backend: backend), transport)
+    await app.restore()
+    #expect(await app.sync() == .success)
+    let original = try #require(backend.samples.values.first)
+    let identity = try #require(original.metadata?[HKMetadataKeySyncIdentifier] as? String)
+
+    await transport.setGlucoseValue(117)
+    #expect(await app.sync() == .success)
+    let corrected = try #require(backend.samples[identity])
+    #expect(backend.samples.count == 1)
+    #expect(backend.saveAttempts == 2)
+    #expect(corrected.uuid != original.uuid)
+    #expect(corrected.quantity.doubleValue(for: HKUnit(from: "mg/dL")) == 117)
+    #expect(corrected.startDate == Date(timeIntervalSince1970: 1_771_415_700))
+    #expect(corrected.endDate == corrected.startDate)
+    #expect(corrected.metadata?[HKMetadataKeySyncIdentifier] as? String == identity)
+    #expect(corrected.metadata?[HKMetadataKeySyncVersion] as? Int == 2)
+    #expect(corrected.metadata?[HKMetadataKeyWasUserEntered] as? Bool == false)
+    #expect(corrected.metadata?["org.librehealthbridge.source"] as? String == "LibreLinkUp cloud import")
+    #expect(corrected.metadata?["org.librehealthbridge.measurementKind"] as? String == "Interstitial glucose")
+}
+
+@Test @MainActor func failedCorrectionSavePreservesHealthSampleAndLastCompletedSync() async throws {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a")
+    let backend = RecordingHealthStore()
+    let transport = FixtureTransport()
+    let app = model(store, HealthWriter(backend: backend), transport)
+    await app.restore()
+    #expect(await app.sync() == .success)
+    let original = try #require(backend.samples.values.first)
+    let identity = try #require(original.metadata?[HKMetadataKeySyncIdentifier] as? String)
+    let completedAt = try #require(store.saved?.lastSync)
+
+    await transport.setGlucoseValue(117)
+    backend.failSave = true
+    #expect(await app.sync() == .failure)
+    #expect(app.errorMessage == app.safeMessage(HealthError.save))
+    #expect(backend.saveAttempts == 2)
+    #expect(backend.samples.count == 1)
+    #expect(backend.samples[identity]?.uuid == original.uuid)
+    #expect(backend.samples[identity]?.quantity.doubleValue(for: HKUnit(from: "mg/dL")) == 108)
+    #expect(store.saved?.lastSync == completedAt)
+    #expect(app.session?.lastSync == completedAt)
+
+    backend.failSave = false
+    #expect(await app.sync() == .success)
+    #expect(backend.samples.count == 1)
+    #expect(backend.samples[identity]?.quantity.doubleValue(for: HKUnit(from: "mg/dL")) == 117)
+    #expect(backend.samples[identity]?.metadata?[HKMetadataKeySyncVersion] as? Int == 2)
 }
 
 @Test @MainActor func writerChecksCancellationBeforeSaving() async throws {
@@ -269,19 +408,6 @@ private final class FakeHealthStore: GlucoseHealthStore {
     #expect(health.writes == 0)
 }
 
-@Test @MainActor func healthSuccessAndStorageFailureReportsWarning() async {
-    let store = MemoryStore()
-    store.saved = session(selected: "patient-a", verified: "patient-a")
-    let health = FakeWriter()
-    let app = model(store, health, FixtureTransport())
-    await app.restore()
-    store.failSave = true
-    #expect(await app.sync() == .completedWithStorageWarning)
-    #expect(health.writes == 1)
-    #expect(app.session?.lastSync != nil)
-    #expect(app.errorMessage != nil)
-}
-
 @Test @MainActor func failedRefreshDoesNotImportOldPreview() async {
     let store = MemoryStore()
     store.saved = session(selected: "patient-a", verified: "patient-a")
@@ -373,18 +499,28 @@ private final class FakeHealthStore: GlucoseHealthStore {
     #expect(health.writes == 0)
 }
 
-@Test @MainActor func failedStorageDuringFirstImportKeepsSyncPaused() async {
+@Test @MainActor func completedHealthSaveWithFailedSessionSaveWarnsAndKeepsStartingSyncPaused() async throws {
     let store = MemoryStore()
     store.saved = session(selected: "patient-a", verified: "patient-a", paused: true)
-    let health = FakeWriter()
-    let app = model(store, health, FixtureTransport())
+    let backend = RecordingHealthStore()
+    let app = model(store, HealthWriter(backend: backend), FixtureTransport())
     await app.restore()
     store.failSave = true
+
     #expect(await app.sync(starting: true) == .completedWithStorageWarning)
-    #expect(health.writes == 1)
+    let sample = try #require(backend.samples.values.first)
+    #expect(backend.samples.count == 1)
+    #expect(backend.saveAttempts == 1)
+    #expect(sample.quantity.doubleValue(for: HKUnit(from: "mg/dL")) == 108)
+    #expect(sample.startDate == Date(timeIntervalSince1970: 1_771_415_700))
+    #expect(sample.endDate == sample.startDate)
+    #expect(sample.metadata?[HKMetadataKeySyncVersion] as? Int == 1)
     #expect(!app.isHealthSyncActive)
     #expect(app.session?.syncPaused == true)
     #expect(store.saved?.syncPaused == true)
+    #expect(app.session?.lastSync != nil) // The Health write finished.
+    #expect(store.saved?.lastSync == nil) // Persistence did not finish.
+    #expect(app.errorMessage == app.safeMessage(LocalError.statusNotSaved))
 }
 
 @Test @MainActor func busySyncCannotReplaceActiveFeedback() async {
