@@ -77,11 +77,20 @@ final class LibreHealthBridgeUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "enabled == true"), object: confirmation)], timeout: 10), .completed)
         XCTAssertFalse(app.buttons["health.setup.sync"].isEnabled)
-        // The outer Form row is also exposed as a switch. Tap its trailing control,
-        // not the row's midpoint (which does not toggle on iOS 27).
-        confirmation.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.5)).tap()
+        // The Form row is itself exposed as a switch, but tapping its midpoint
+        // does not toggle the actual control on iOS 27.
+        let control = confirmation.switches.firstMatch
+        XCTAssertTrue(control.waitForExistence(timeout: 5))
+        let confirmed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "1"), object: confirmation)
+        control.tap()
+        if XCTWaiter.wait(for: [confirmed], timeout: 5) != .completed {
+            // A Form control can miss its first synthesized tap on the simulator.
+            // Retry the control itself, then require the model-driven value to change.
+            confirmation.switches.firstMatch.tap()
+        }
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == %@", "1"), object: confirmation)], timeout: 5), .completed)
+            predicate: NSPredicate(format: "value == %@", "1"), object: confirmation)], timeout: 10), .completed)
         screenshot(app, named: "after-confirmation")
         let permission = app.buttons["Allow Health access"]
         XCTAssertTrue(permission.waitForExistence(timeout: 5))
