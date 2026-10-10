@@ -5,9 +5,8 @@ extension AppModel {
     @discardableResult
     func confirmPreview() async -> Bool {
         return await perform {
-            guard var saved = session, let id = saved.selectedPatientID,
-                isPreviewCurrent, snapshot?.patientID == id,
-                snapshot?.preview?.canValidate == true
+            guard canConfirmPreview, var saved = session,
+                let id = saved.selectedPatientID
             else { throw LocalError.noReadings }
             saved.verifiedPatientID = id
             try sessionStore.save(saved)
@@ -45,6 +44,20 @@ extension AppModel {
         } == .success
     }
 
+    // Home presents the destination, but the model owns whether an import or a
+    // persisted pause must precede it. Failed persistence must not open setup.
+    func primaryHealthAction() async -> PrimaryHealthAction {
+        guard isSignedIn, !isBusy else { return .stay }
+        refreshHealthAccess()
+        if isHealthSyncActive {
+            return await sync() == .success ? .syncSucceeded : .stay
+        }
+        if isVerified && session?.syncPaused == false {
+            guard await stopHealthSync() else { return .stay }
+        }
+        return .openSetup
+    }
+
     @discardableResult
     func sync(starting: Bool = false) async -> OperationOutcome {
         let result = await perform {
@@ -56,12 +69,15 @@ extension AppModel {
             guard healthAccess == .authorized else {
                 throw HealthError.permission
             }
-            guard selectedConnection != nil else { throw CloudError.missingConnection }
+            guard canStartHealthSync else { throw CloudError.missingConnection }
             // Always refetch the selected connection. Never import an old preview after an error.
             try await fetchPreview(persistStatus: false)
             guard let snapshot, var saved = session,
                 saved.selectedPatientID == snapshot.patientID
             else { throw CloudError.missingConnection }
+            guard saved.verifiedPatientID == snapshot.patientID else {
+                throw LocalError.validationRequired
+            }
             saved.lastSync = try await health.write(
                 snapshot,
                 verifiedPatientID: saved.verifiedPatientID

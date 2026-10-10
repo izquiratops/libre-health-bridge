@@ -6,6 +6,10 @@ enum OperationOutcome: Equatable {
     case success, completedWithStorageWarning, cancelled, busy, failure
 }
 
+enum PrimaryHealthAction {
+    case openSetup, syncSucceeded, stay
+}
+
 enum RestorationState {
     case idle, loading, loaded, retryableFailure
 }
@@ -56,9 +60,20 @@ final class AppModel {
         return session?.verifiedPatientID == selectedPatientID
     }
 
+    // Confirmation is tied to the displayed, current preview of the selected patient.
+    // Import is different: it refetches, so a stale display does not block a confirmed profile.
+    var canConfirmPreview: Bool {
+        guard let selected = selectedConnection else { return false }
+        return isPreviewCurrent && snapshot?.patientID == selected.patientId
+            && snapshot?.preview?.canValidate == true
+    }
+
+    var canStartHealthSync: Bool {
+        selectedConnection != nil && isVerified && healthAccess == .authorized
+    }
+
     var isHealthSyncActive: Bool {
-        isSignedIn && selectedConnection != nil && isVerified
-            && healthAccess == .authorized && session?.syncPaused == false
+        canStartHealthSync && session?.syncPaused == false
     }
 
     var healthSyncStatus: String {

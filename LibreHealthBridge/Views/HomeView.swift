@@ -193,19 +193,12 @@ struct HomeView: View {
             openLogin()
             return
         }
-        model.refreshHealthAccess()
-        if model.isHealthSyncActive {
-            Task {
-                let outcome = await model.sync()
-                if outcome == .success { showHomeSyncSuccess = true }
+        Task {
+            switch await model.primaryHealthAction() {
+            case .openSetup: openSetup()
+            case .syncSucceeded: showHomeSyncSuccess = true
+            case .stay: break
             }
-        } else if model.isVerified && model.session?.syncPaused == false {
-            // A missing profile or revoked permission must not resume automatically.
-            Task {
-                if await model.stopHealthSync() { openSetup() }
-            }
-        } else {
-            openSetup()
         }
     }
 

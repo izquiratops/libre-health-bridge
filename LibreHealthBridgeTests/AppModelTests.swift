@@ -537,3 +537,107 @@ private final class RecordingHealthStore: GlucoseHealthStore {
     await transport.releaseGraph()
     #expect(await first.value == .success)
 }
+
+@Test @MainActor func setupConfirmationRequiresCurrentMatchingValidPreview() async {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", paused: true)
+    let transport = FixtureTransport()
+    let app = model(store, FakeWriter(), transport)
+    await app.restore()
+    #expect(app.canConfirmPreview)
+    let previousPreview = app.snapshot
+
+    await transport.setGraphFailure(true)
+    await app.refresh() // A failed fetch leaves the displayed preview stale.
+    #expect(!app.canConfirmPreview)
+    #expect(await app.confirmPreview() == false)
+    await transport.setGraphFailure(false)
+    await app.selectConnection("patient-b") // No measurement in this profile.
+    #expect(!app.canConfirmPreview)
+    #expect(await app.confirmPreview() == false)
+    app.snapshot = previousPreview // Simulate a late preview for the old patient.
+    app.isPreviewCurrent = true
+    #expect(!app.canConfirmPreview)
+    #expect(await app.confirmPreview() == false)
+    #expect(store.saved?.verifiedPatientID == nil)
+}
+
+@Test @MainActor func setupImportCanRefetchStalePreviewButNeedsProfileAndPermission() async {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a", paused: true)
+    let health = FakeWriter()
+    let transport = FixtureTransport()
+    let app = model(store, health, transport)
+    await app.restore()
+    await transport.setGraphFailure(true)
+    await app.refresh()
+    #expect(!app.canConfirmPreview)
+    #expect(app.canStartHealthSync) // Import refetches; confirmation cannot use this preview.
+    #expect(await app.sync(starting: true) == .failure)
+    #expect(health.writes == 0)
+    await transport.setGraphFailure(false)
+    #expect(await app.sync() == .failure) // Ordinary import cannot resume a pause.
+    #expect(await app.sync(starting: true) == .success)
+    #expect(health.writes == 1)
+    #expect(app.isHealthSyncActive)
+
+    health.access = .denied
+    #expect(await app.sync() == .failure) // Permission is refreshed at execution.
+    #expect(health.writes == 1)
+    #expect(!app.canStartHealthSync)
+    health.access = .authorized
+    app.refreshHealthAccess()
+    #expect(health.writes == 1) // Permission recovery alone does not import.
+    await transport.setEmptyConnections(true)
+    await app.refresh()
+    #expect(app.selectedConnection == nil)
+    #expect(!app.canStartHealthSync)
+    #expect(await app.sync(starting: true) == .failure)
+    #expect(health.writes == 1)
+}
+
+@Test @MainActor func primaryActionPersistsPauseBeforeOpeningSetupOnPermissionOrProfileLoss() async {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a")
+    let health = FakeWriter()
+    let transport = FixtureTransport()
+    let app = model(store, health, transport)
+    await app.restore()
+    health.access = .denied
+    #expect(await app.primaryHealthAction() == .openSetup)
+    #expect(store.saved?.syncPaused == true)
+    #expect(!app.isHealthSyncActive)
+    health.access = .authorized
+    app.refreshHealthAccess()
+    #expect(await app.primaryHealthAction() == .openSetup)
+    #expect(health.writes == 0) // Recovery requires an explicit setup resume.
+
+    let missingStore = MemoryStore()
+    missingStore.saved = session(selected: "patient-a", verified: "patient-a")
+    let missingTransport = FixtureTransport()
+    let missing = model(missingStore, FakeWriter(), missingTransport)
+    await missing.restore()
+    await missingTransport.setEmptyConnections(true)
+    await missing.refresh()
+    #expect(missing.selectedConnection == nil)
+    #expect(await missing.primaryHealthAction() == .openSetup)
+    #expect(missingStore.saved?.syncPaused == true)
+}
+
+@Test @MainActor func failedPausePreventsSetupAndPreservesSession() async {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-a", verified: "patient-a")
+    let health = FakeWriter()
+    let app = model(store, health, FixtureTransport())
+    await app.restore()
+    health.access = .denied
+    store.failSave = true
+    #expect(await app.primaryHealthAction() == .stay)
+    #expect(store.saved?.syncPaused == false)
+    #expect(app.session?.syncPaused == false)
+    #expect(app.errorMessage == app.safeMessage(LocalError.keychain))
+    #expect(health.writes == 0)
+    store.failSave = false
+    #expect(await app.primaryHealthAction() == .openSetup)
+    #expect(store.saved?.syncPaused == true)
+}

@@ -10,20 +10,13 @@ struct HealthSetupView: View {
     @State private var showProfileSwitch = false
     @State private var showHealthOpenFailure = false
 
-    private var hasCurrentReading: Bool {
-        guard let selected = model.selectedConnection else { return false }
-        return model.isPreviewCurrent
-            && model.snapshot?.patientID == selected.patientId
-            && model.snapshot?.preview?.canValidate == true
-    }
-
     private var readingStatusText: String {
-        if hasCurrentReading && model.isVerified { return "reading.confirmed" }
+        if model.canConfirmPreview && model.isVerified { return "reading.confirmed" }
         if model.selectedConnection == nil { return "reading.chooseProfileFirst" }
         if model.snapshot != nil && !model.isPreviewCurrent {
             return "reading.refreshRequired"
         }
-        return hasCurrentReading ? "reading.confirmPrompt" : "reading.noLatest"
+        return model.canConfirmPreview ? "reading.confirmPrompt" : "reading.noLatest"
     }
 
     var body: some View {
@@ -38,11 +31,7 @@ struct HealthSetupView: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(
-                model.selectedConnection == nil
-                    || !model.isVerified
-                    || model.healthAccess != .authorized
-            )
+            .disabled(!model.canStartHealthSync)
             .accessibilityIdentifier("health.setup.sync")
             .bottomActionLayout()
         }
@@ -83,10 +72,10 @@ struct HealthSetupView: View {
         Section {
             statusLine(
                 readingStatusText,
-                icon: model.isVerified && hasCurrentReading ? "clock.fill" : "clock",
-                complete: model.isVerified && hasCurrentReading
+                icon: model.isVerified && model.canConfirmPreview ? "clock.fill" : "clock",
+                complete: model.isVerified && model.canConfirmPreview
             )
-            if hasCurrentReading, let preview = model.snapshot?.preview,
+            if model.canConfirmPreview, let preview = model.snapshot?.preview,
                 let value = preview.valueMgDl, let time = preview.timestamp
             {
                 LabeledContent("reading.latest", value: glucoseLabel(value))
@@ -105,7 +94,7 @@ struct HealthSetupView: View {
                         }
                     }
                 ))
-                .disabled(!hasCurrentReading && !model.isVerified)
+                .disabled(!model.canConfirmPreview && !model.isVerified)
                 .accessibilityIdentifier("health.setup.confirm")
                 Button("reading.refresh") { Task { await model.refresh() } }
                 .accessibilityIdentifier("health.setup.refresh")
@@ -173,8 +162,7 @@ struct HealthSetupView: View {
 
     private func startSync() {
         Task {
-            guard model.isVerified && model.healthAccess == .authorized else { return }
-            // The sync refetches data and checks permission before writing.
+            // The model rechecks eligibility, refetches, and checks permission before writing.
             let outcome = await model.sync(starting: true)
             if outcome == .success {
                 dismiss()
