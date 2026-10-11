@@ -40,8 +40,8 @@
 "profile.unnamed" = "Unnamed connection";
 "profile.selectPrompt" = "Choose your profile to continue.";
 "sync.start" = "Sync with Apple Health";
-"sync.explanation" = "Manual sync only. Downloads readings, then saves valid ones to Health.";
-"sync.lastCompleted" = "Last completed sync";
+"sync.explanation" = "Downloads fresh readings, then saves valid ones to Health. Automatic background sync is optional with Premium.";
+"sync.lastCompleted" = "Last update";
 "health.name" = "Apple Health";
 "health.setup.modalTitle" = "Sync with Apple Health";
 "health.setup.title" = "Allow Health access";
@@ -51,7 +51,7 @@
 "health.sync.permissionOff" = "Health permission is off. Enable glucose writes to continue.";
 "health.sync.working" = "Ready for manual sync";
 "health.sync.resumeDetail" = "Synchronization is stopped. Open Health setup to continue.";
-"health.setup.explanation" = "Apple Health saves your sensor readings as Blood Glucose so you can view them with your other health data. Sync runs only when you tap the button.";
+"health.setup.explanation" = "Apple Health saves your sensor readings as Blood Glucose so you can view them with your other health data. Manual sync runs when you tap the button; optional Premium background attempts require separate consent.";
 "health.setup.enableWrites" = "Enable Blood Glucose writes in Health → your profile → Apps → Libre Health Bridge, then return and try again.";
 "health.setup.sync" = "Confirm";
 "reading.title" = "Check its value";
@@ -74,8 +74,8 @@
 "about.analytics.detail" = "Downloaded readings stay in memory until you import them into Health.";
 "about.healthData.title" = "Health data stays in Health";
 "about.healthData.detail" = "Logging out removes credentials and local status, not Health samples. Manage permissions and samples in Health.";
-"about.limitations.title" = "Manual sync and limitations";
-"about.limitations.detail" = "No sensor connection, glucose alarms, or guaranteed full history. Background checks are planned for the future.";
+"about.limitations.title" = "Sync and limitations";
+"about.limitations.detail" = "No sensor connection, glucose alarms, or guaranteed full history. Optional Premium background attempts are controlled by iOS and may not run while the phone is locked.";
 "about.version" = "Version";
 "health.access.unavailable" = "Health is unavailable on this device";
 "health.access.notRequested" = "Permission not requested";
@@ -107,3 +107,30 @@
 "error.cloud.wrongPatient" = "The response belongs to another connection. No readings were imported.";
 "error.import.invalidStoredVersion" = "An existing Health sample has an invalid sync version. No samples were changed.";
 "error.unknown" = "The operation failed. No private data was logged. Try again.";
+
+/* Automatic background sync */
+"automatic.title" = "Automatic sync";
+"automatic.intro" = "Premium unlocks automatic background sync. Manual sync stays free.";
+"automatic.cost" = "One-time purchase supports distribution and development costs. No subscription. Refunds are available through Apple subject to applicable rights.";
+"automatic.timing" = "iOS controls background work. The interval is approximate; attempts may be substantially delayed or never run. Force quit and system settings can prevent them.";
+"automatic.locked" = "A locked iPhone may defer imports, including overnight. Opening the app does not automatically catch up.";
+"automatic.unofficial" = "Unofficial and unaffiliated with Abbott. LibreLinkUp access can change or disappear for everyone.";
+"automatic.safety" = "Not a glucose alarm or treatment-monitoring service. Keep the official app for readings and alarms.";
+"automatic.enable" = "Enable automatic sync";
+"automatic.interval" = "Request interval";
+"automatic.15" = "15 minutes";
+"automatic.30" = "30 minutes";
+"automatic.60" = "60 minutes";
+"automatic.buy" = "Unlock Premium — %@";
+"automatic.restore" = "Restore Purchases";
+"automatic.productUnavailable" = "Purchase temporarily unavailable. Try again later.";
+"automatic.statusTitle" = "Status";
+"automatic.off" = "Off";
+"automatic.attention" = "Needs attention. Check your account, profile and Health setup.";
+"automatic.deferred" = "Temporarily unavailable; a later attempt may be requested.";
+"automatic.refreshUnavailable" = "Background App Refresh is disabled in iOS settings. Automatic attempts may not run.";
+"automatic.enabledStatus" = "Enabled; timing managed by iOS.";
+"automatic.setupRequired" = "Connect your account, confirm your own profile, grant Health writes and complete Health setup first.";
+"automatic.purchaseFailed" = "Purchase could not be verified or completed. No Premium access was granted.";
+"automatic.restoreFailed" = "Restore unavailable right now. Try again later.";
+"automatic.pending" = "Purchase pending approval. Automatic sync stays off until Apple verifies ownership.";

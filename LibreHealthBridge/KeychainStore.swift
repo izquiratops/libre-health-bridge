@@ -9,9 +9,18 @@ struct SavedSession: Codable {
     var lastSync: Date?
     // Absent in sessions saved before the pause control was introduced.
     var syncPaused: Bool = false
+    // Consent and non-glucose scheduling state remain in the protected session item.
+    var automaticEnabled: Bool = false
+    var automaticInterval: Int = 30
+    var automaticEarliest: Date?
+    var automaticBackoffUntil: Date?
+    var automaticAttention: Bool = false
+    var automaticDeferred: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case credentials, selectedPatientID, verifiedPatientID, lastSync, report, syncPaused
+        case automaticEnabled, automaticInterval, automaticEarliest, automaticBackoffUntil, automaticAttention
+        case automaticDeferred
     }
 
     init(credentials: Credentials, selectedPatientID: String? = nil,
@@ -33,6 +42,13 @@ struct SavedSession: Codable {
         lastSync = try values.decodeIfPresent(Date.self, forKey: .lastSync)
             ?? values.decodeIfPresent(LegacyReport.self, forKey: .report)?.completedAt
         syncPaused = try values.decodeIfPresent(Bool.self, forKey: .syncPaused) ?? false
+        automaticEnabled = try values.decodeIfPresent(Bool.self, forKey: .automaticEnabled) ?? false
+        let interval = try values.decodeIfPresent(Int.self, forKey: .automaticInterval) ?? 30
+        automaticInterval = [15, 30, 60].contains(interval) ? interval : 30
+        automaticEarliest = try values.decodeIfPresent(Date.self, forKey: .automaticEarliest)
+        automaticBackoffUntil = try values.decodeIfPresent(Date.self, forKey: .automaticBackoffUntil)
+        automaticAttention = try values.decodeIfPresent(Bool.self, forKey: .automaticAttention) ?? false
+        automaticDeferred = try values.decodeIfPresent(Bool.self, forKey: .automaticDeferred) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -42,6 +58,12 @@ struct SavedSession: Codable {
         try values.encodeIfPresent(verifiedPatientID, forKey: .verifiedPatientID)
         try values.encodeIfPresent(lastSync, forKey: .lastSync)
         try values.encode(syncPaused, forKey: .syncPaused)
+        try values.encode(automaticEnabled, forKey: .automaticEnabled)
+        try values.encode(automaticInterval, forKey: .automaticInterval)
+        try values.encodeIfPresent(automaticEarliest, forKey: .automaticEarliest)
+        try values.encodeIfPresent(automaticBackoffUntil, forKey: .automaticBackoffUntil)
+        try values.encode(automaticAttention, forKey: .automaticAttention)
+        try values.encode(automaticDeferred, forKey: .automaticDeferred)
     }
 
     private struct LegacyReport: Decodable {

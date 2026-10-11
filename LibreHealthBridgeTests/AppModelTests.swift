@@ -45,13 +45,20 @@ private actor FixtureTransport: CloudTransport {
     var failConnections = false
     var emptyConnections = false
     var failGraph = false
+    var retryAfter: Date?
+    var termsRequired = false
+    var unauthorizedGraph = false
     var holdGraph = false
     var glucoseValue = 108
+    var graphRequests = 0
     func setGlucoseValue(_ value: Int) { glucoseValue = value }
     private var pending: CheckedContinuation<Void, any Error>?
     func setConnectionsFailure(_ value: Bool) { failConnections = value }
     func setEmptyConnections(_ value: Bool) { emptyConnections = value }
     func setGraphFailure(_ value: Bool) { failGraph = value }
+    func setRetryAfter(_ date: Date?) { retryAfter = date }
+    func setTermsRequired(_ value: Bool) { termsRequired = value }
+    func setUnauthorizedGraph(_ value: Bool) { unauthorizedGraph = value }
     func setHoldGraph(_ value: Bool) { holdGraph = value }
     func waitForGraph() async {
         while pending == nil { await Task.yield() }
@@ -76,8 +83,12 @@ private actor FixtureTransport: CloudTransport {
                 {"patientId":"patient-b","firstName":"Blair"}]}
                 """
         case "/llu/connections/patient-a/graph", "/llu/connections/patient-b/graph":
+            graphRequests += 1
             if holdGraph { try await withCheckedThrowingContinuation { pending = $0 } }
             if failGraph { throw CloudError.network }
+            if let retryAfter { return HTTPResult(status: 429, data: Data(), retryAfter: retryAfter) }
+            if termsRequired { return HTTPResult(status: 200, data: Data(#"{"status":4}"#.utf8)) }
+            if unauthorizedGraph { return HTTPResult(status: 401, data: Data()) }
             let id = request.url!.pathComponents[3]
             body = "{\"status\":0,\"data\":{\"connection\":{\"patientId\":\"\(id)\"},\"graphData\":[]}}"
         default: throw CloudError.invalidResponse
@@ -640,4 +651,414 @@ private final class RecordingHealthStore: GlucoseHealthStore {
     store.failSave = false
     #expect(await app.primaryHealthAction() == .openSetup)
     #expect(store.saved?.syncPaused == true)
+}
+
+@MainActor private final class PremiumFixture: PremiumStore {
+    var state: PremiumOwnership = .notOwned
+    var purchaseResult: PurchaseOutcome = .cancelled
+    var failProduct = false
+    var purchaseError: PremiumError?
+    private var changed: (@MainActor () async -> Void)?
+    func ownership() async -> PremiumOwnership { state }
+    func price() async throws -> String {
+        if failProduct { throw PremiumError.unavailable }
+        return "$2.99" // Fixture only; the production UI uses StoreKit's localized price.
+    }
+    func purchase() async throws -> PurchaseOutcome {
+        if failProduct { throw PremiumError.unavailable }
+        if let purchaseError { throw purchaseError }
+        return purchaseResult
+    }
+    func restore() async throws { }
+    func observe(_ changed: @escaping @MainActor () async -> Void) { self.changed = changed }
+    func update(_ state: PremiumOwnership) async {
+        self.state = state
+        await changed?()
+    }
+}
+
+@MainActor private final class SchedulerFixture: RefreshScheduler {
+    var pending: Date?
+    var requests: [Date?] = []
+    func replace(earliest: Date?) throws { pending = earliest; requests.append(earliest) }
+}
+
+@MainActor private func automaticFixture(
+    _ store: MemoryStore, _ premium: PremiumFixture, _ scheduler: SchedulerFixture,
+    _ clock: @escaping () -> Date, _ transport: FixtureTransport = FixtureTransport(),
+    protected: @escaping () -> Bool = { true }, health: any GlucoseWriter = FakeWriter()
+) -> AppModel {
+    AppModel(sessionStore: store, health: health,
+             makeClient: { LibreCloudClient(credentials: $0, transport: transport) },
+             premium: premium, scheduler: scheduler, now: clock,
+             protectedDataAvailable: protected)
+}
+
+@Test @MainActor func automaticSettingsDefaultOffAndRejectInvalidInterval() throws {
+    let original = session(selected: "patient-a", verified: "patient-a")
+    let decoded = try JSONDecoder().decode(SavedSession.self, from: JSONEncoder().encode(original))
+    #expect(!decoded.automaticEnabled)
+    #expect(decoded.automaticInterval == 30)
+    var payload = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+    payload["automaticInterval"] = 7
+    let corrupted = try JSONDecoder().decode(SavedSession.self,
+        from: JSONSerialization.data(withJSONObject: payload))
+    #expect(corrupted.automaticInterval == 30)
+    let store = MemoryStore(); store.saved = decoded
+    let app = automaticFixture(store, PremiumFixture(), SchedulerFixture(), { .now })
+    app.session = decoded
+    app.setAutomaticInterval(7)
+    #expect(store.saved?.automaticInterval == 30)
+}
+
+@Test @MainActor func purchaseAndRestoreDoNotEnableAndRevocationStops() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let clock = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { clock }, health: health)
+    await app.restore()
+    await app.startPremiumObservation()
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticEnabled == false)
+    await app.buyPremium() // cancelled
+    #expect(app.ownership == .notOwned)
+    premium.purchaseResult = .pending
+    await app.buyPremium()
+    #expect(app.ownership == .notOwned)
+    #expect(app.automaticMessage == "automatic.pending")
+    premium.purchaseError = .unverified
+    await app.buyPremium()
+    #expect(app.ownership == .notOwned)
+    #expect(app.automaticMessage == "automatic.purchaseFailed")
+    premium.purchaseError = nil
+    premium.purchaseResult = .purchased
+    await premium.update(.owned)
+    await app.buyPremium()
+    await app.restorePremium()
+    #expect(store.saved?.automaticEnabled == false)
+    #expect(health.writes == 0)
+    await app.setAutomaticEnabled(true)
+    #expect(scheduler.pending == clock.addingTimeInterval(1800))
+    #expect(health.writes == 0)
+    await premium.update(.notOwned)
+    #expect(store.saved?.automaticEnabled == false)
+    #expect(scheduler.pending == nil)
+    #expect(health.writes == 0)
+    #expect(await app.sync() == .success) // Free manual access survives revocation.
+    #expect(health.writes == 1)
+    #expect(scheduler.pending == nil)
+}
+
+private final class CompletionProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcomes: [Bool] = []
+    func record(_ outcome: Bool) { lock.lock(); outcomes.append(outcome); lock.unlock() }
+    var values: [Bool] { lock.lock(); defer { lock.unlock() }; return outcomes }
+}
+
+@Test func backgroundExpirationCompletesOnlyOnce() {
+    let probe = CompletionProbe()
+    let completion = RefreshCompletion { probe.record($0) }
+    #expect(completion.reserveExpiration()) // Reserve while requesting the next opportunity.
+    #expect(!completion.finish(true)) // A late Health completion cannot win.
+    completion.finishExpiration()
+    completion.finishExpiration()
+    #expect(probe.values == [false])
+}
+
+@Test @MainActor func temporarilyUnknownOwnershipDefersWithoutRevokingOptIn() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    let time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: health)
+    await app.restore(); await app.startPremiumObservation(); await app.setAutomaticEnabled(true)
+    #expect(scheduler.pending == time.addingTimeInterval(1800))
+    await premium.update(.unknown)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(scheduler.pending == nil)
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(health.writes == 0)
+    #expect(await app.sync() == .success) // Unknown Premium does not block free manual sync.
+    #expect(health.writes == 1)
+    await premium.update(.owned)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(scheduler.pending == time.addingTimeInterval(3600)) // Deferred attempt's backoff.
+}
+
+@Test @MainActor func automaticCompletionSharesManualTimestampAndReschedules() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: health)
+    await app.restore(); await app.refreshPremium()
+    await app.setAutomaticEnabled(true)
+    #expect(await app.backgroundAttempt() == .failure) // Not yet eligible.
+    #expect(health.writes == 0)
+    time = time.addingTimeInterval(3600)
+    #expect(await app.backgroundAttempt() == .success)
+    #expect(health.writes == 1)
+    #expect(app.session?.lastSync != nil)
+    #expect(scheduler.pending == time.addingTimeInterval(1800))
+    time = time.addingTimeInterval(60)
+    #expect(await app.sync() == .success)
+    #expect(health.writes == 2)
+    #expect(scheduler.pending == time.addingTimeInterval(1800))
+    app.setAutomaticInterval(60)
+    #expect(scheduler.pending == time.addingTimeInterval(3600))
+    #expect(store.saved?.lastSync == app.session?.lastSync)
+}
+
+@Test @MainActor func protectionFailureAndConsentResetNeverImport() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    var unlocked = true
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, protected: { unlocked }, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    time = time.addingTimeInterval(1800)
+    unlocked = false
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(health.writes == 0)
+    #expect(store.saved?.automaticEnabled == true)
+    unlocked = true
+    store.failSave = true
+    #expect(await app.stopHealthSync() == false)
+    #expect(store.saved?.automaticEnabled == true)
+    store.failSave = false
+    #expect(await app.stopHealthSync())
+    #expect(store.saved?.automaticEnabled == false)
+    #expect(scheduler.pending == nil)
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(health.writes == 0)
+}
+
+@Test @MainActor func coldBackgroundLaunchFetchesOnceAndRespectsSavedCooldown() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let transport = FixtureTransport()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let first = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    await first.restore(); await first.refreshPremium(); await first.setAutomaticEnabled(true)
+    let second = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    #expect(await second.backgroundAttempt() == .failure)
+    #expect(health.writes == 0)
+    time = time.addingTimeInterval(1800)
+    #expect(await second.backgroundAttempt() == .success)
+    #expect(health.writes == 1)
+    #expect(await transport.graphRequests == 2) // One foreground preview, one background import.
+    #expect(store.saved?.lastSync != nil)
+    #expect(await second.backgroundAttempt() == .failure)
+    #expect(health.writes == 1)
+}
+
+@Test @MainActor func coldLockedKeychainLoadDefersWithoutErasingConsent() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    store.saved?.automaticEnabled = true
+    store.saved?.automaticEarliest = Date(timeIntervalSince1970: 2_000_000_000)
+    store.failLoad = true
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: health)
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(scheduler.pending == time.addingTimeInterval(3600))
+    #expect(health.writes == 0)
+    store.failLoad = false
+    time = time.addingTimeInterval(3600)
+    #expect(await app.backgroundAttempt() == .success)
+    #expect(health.writes == 1)
+}
+
+@Test @MainActor func backgroundImportStorageWarningRetainsTruthfulCompletion() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    time = time.addingTimeInterval(1800)
+    store.failSave = true
+    #expect(await app.backgroundAttempt() == .completedWithStorageWarning)
+    #expect(health.writes == 1)
+    #expect(store.saved?.lastSync == nil)
+    #expect(app.session?.lastSync != nil)
+    #expect(app.errorMessage == app.safeMessage(LocalError.statusNotSaved))
+    #expect(app.automaticMessage == "error.local.statusNotSaved")
+    #expect(scheduler.pending == time.addingTimeInterval(3600))
+}
+
+@Test @MainActor func backgroundRateLimitPersistsLongerServerDelayAcrossIntervalChanges() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let transport = FixtureTransport()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    let retry = time.addingTimeInterval(7200)
+    await transport.setRetryAfter(retry)
+    time = time.addingTimeInterval(1800)
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(health.writes == 0)
+    #expect(store.saved?.lastSync == nil)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(scheduler.pending == retry)
+    app.setAutomaticInterval(15)
+    #expect(scheduler.pending == retry)
+    await transport.setRetryAfter(nil)
+    time = retry
+    #expect(await app.backgroundAttempt() == .success)
+    #expect(scheduler.pending == retry.addingTimeInterval(900))
+}
+
+@Test @MainActor func termsRequireAttentionAndUnknownOwnershipDoesNotEraseConsent() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let transport = FixtureTransport()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    await transport.setTermsRequired(true)
+    time = time.addingTimeInterval(1800)
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(store.saved?.automaticAttention == true)
+    #expect(scheduler.pending == nil)
+    #expect(health.writes == 0)
+    await premium.update(.unknown)
+    #expect(store.saved?.automaticEnabled == true)
+    await transport.setTermsRequired(false)
+    #expect(await app.backgroundAttempt() == .failure) // No silent resumption.
+    #expect(health.writes == 0)
+    await premium.update(.owned)
+    await app.setAutomaticEnabled(false)
+    await app.setAutomaticEnabled(true) // Renew explicit opt-in after resolving terms.
+    #expect(store.saved?.automaticAttention == false)
+}
+
+@Test @MainActor func concurrentManualAndBackgroundNeverDuplicateImport() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let transport = FixtureTransport()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    time = time.addingTimeInterval(1800)
+    await transport.setHoldGraph(true)
+    let manual = Task { await app.sync() }
+    await transport.waitForGraph()
+    #expect(await app.backgroundAttempt() == .busy)
+    await transport.releaseGraph()
+    #expect(await manual.value == .success)
+    #expect(health.writes == 1)
+    #expect(scheduler.pending == time.addingTimeInterval(3600))
+    #expect(store.saved?.automaticEarliest == scheduler.pending)
+}
+
+@Test @MainActor func expiredBackgroundFetchResubmitsWithoutAdvancingCompletion() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let transport = FixtureTransport()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    time = time.addingTimeInterval(1800)
+    await transport.setHoldGraph(true)
+    let work = Task { await app.backgroundAttempt() }
+    await transport.waitForGraph()
+    // The system expiration handler cancels work and requests a later opportunity.
+    work.cancel()
+    app.automaticAttemptFinished(.cancelled)
+    await transport.releaseGraph()
+    #expect(await work.value == .cancelled)
+    #expect(health.writes == 0)
+    #expect(store.saved?.lastSync == nil)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(scheduler.pending == time.addingTimeInterval(3600))
+}
+
+@Test @MainActor func revokedHealthPermissionRequiresExplicitSetupBeforeRenewedOptIn() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    time = time.addingTimeInterval(1800)
+    health.access = .denied
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(store.saved?.automaticAttention == true)
+    #expect(store.saved?.syncPaused == true)
+    #expect(store.saved?.automaticEnabled == true) // Not a consent reset.
+    #expect(scheduler.pending == nil)
+    health.access = .authorized
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticAttention == true)
+    #expect(health.writes == 0)
+    #expect(await app.sync(starting: true) == .success)
+    #expect(store.saved?.automaticAttention == true)
+    await app.setAutomaticEnabled(false)
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticAttention == false)
+    #expect(scheduler.pending == time.addingTimeInterval(1800))
+}
+
+@Test @MainActor func repeatedUnauthorizedBackgroundResponseNeedsAttention() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    let transport = FixtureTransport()
+    premium.state = .owned
+    var time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, transport, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    time = time.addingTimeInterval(1800)
+    await transport.setUnauthorizedGraph(true)
+    #expect(await app.backgroundAttempt() == .failure)
+    #expect(store.saved?.automaticAttention == true)
+    #expect(scheduler.pending == nil)
+    #expect(health.writes == 0)
+}
+
+@Test @MainActor func failedAutomaticPreferenceSaveNeverClaimsDurableChange() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture()
+    premium.state = .owned
+    let app = automaticFixture(store, premium, scheduler, { Date(timeIntervalSince1970: 2_000_000_000) })
+    await app.restore(); await app.refreshPremium()
+    store.failSave = true
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticEnabled == false)
+    #expect(app.session?.automaticEnabled == false)
+    #expect(scheduler.pending == nil)
+    store.failSave = false
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticEnabled == true)
+    let pending = scheduler.pending
+    store.failSave = true
+    await app.setAutomaticEnabled(false)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(app.session?.automaticEnabled == true)
+    #expect(scheduler.pending == pending)
+    #expect(app.automaticMessage == "error.local.statusNotSaved")
+}
+
+@Test @MainActor func unavailableProductDoesNotChangeOwnershipOrConsent() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture()
+    premium.failProduct = true
+    let app = automaticFixture(store, premium, scheduler, { .now })
+    await app.restore(); await app.startPremiumObservation()
+    #expect(app.premiumPrice == nil)
+    #expect(app.ownership == .notOwned)
+    await app.buyPremium()
+    #expect(app.automaticMessage == "automatic.purchaseFailed")
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticEnabled == false)
 }

@@ -2,6 +2,7 @@ import Foundation
 
 public enum CloudError: Error, LocalizedError, Equatable, Sendable {
     case network, invalidResponse, invalidCredentials, termsRequired, rateLimited
+    case rateLimitedUntil(Date)
     case http(Int), api(Int), regionalRedirect, missingConnection, wrongPatient
 
     public var errorDescription: String? {
@@ -10,7 +11,7 @@ public enum CloudError: Error, LocalizedError, Equatable, Sendable {
         case .invalidResponse: "error.cloud.invalidResponse"
         case .invalidCredentials: "error.cloud.invalidCredentials"
         case .termsRequired: "error.cloud.termsRequired"
-        case .rateLimited: "error.cloud.rateLimited"
+        case .rateLimited, .rateLimitedUntil: "error.cloud.rateLimited"
         case .http: "error.cloud.http"
         case .api: "error.cloud.api"
         case .regionalRedirect: "error.cloud.regionalRedirect"
@@ -23,7 +24,10 @@ public enum CloudError: Error, LocalizedError, Equatable, Sendable {
 public struct HTTPResult: Sendable {
     public let status: Int
     public let data: Data
-    public init(status: Int, data: Data) { self.status = status; self.data = data }
+    public let retryAfter: Date?
+    public init(status: Int, data: Data, retryAfter: Date? = nil) {
+        self.status = status; self.data = data; self.retryAfter = retryAfter
+    }
 }
 
 public protocol CloudTransport: Sendable {
@@ -56,7 +60,19 @@ public actor URLSessionTransport: CloudTransport {
     public func send(_ request: URLRequest) async throws -> HTTPResult {
         let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse else { throw CloudError.invalidResponse }
-        return HTTPResult(status: response.statusCode, data: data)
+        let retryAfter: Date?
+        if let header = response.value(forHTTPHeaderField: "Retry-After") {
+            if let seconds = TimeInterval(header), seconds >= 0, seconds.isFinite {
+                retryAfter = Date().addingTimeInterval(seconds)
+            } else {
+                let format = DateFormatter()
+                format.locale = Locale(identifier: "en_US_POSIX")
+                format.timeZone = TimeZone(secondsFromGMT: 0)
+                format.dateFormat = "EEE, dd MMM yyyy HH:mm:ss 'GMT'"
+                retryAfter = format.date(from: header)
+            }
+        } else { retryAfter = nil }
+        return HTTPResult(status: response.statusCode, data: data, retryAfter: retryAfter)
     }
 }
 
@@ -108,7 +124,10 @@ public actor LibreCloudClient {
         catch let error as URLError where error.code == .cancelled { throw CancellationError() }
         catch { try Task.checkCancellation(); throw CloudError.network }
         try Task.checkCancellation()
-        if response.status == 429 { throw CloudError.rateLimited }
+        if response.status == 429 {
+            if let until = response.retryAfter { throw CloudError.rateLimitedUntil(until) }
+            throw CloudError.rateLimited
+        }
         guard (200..<300).contains(response.status) else { throw CloudError.http(response.status) }
         // Decode status before payload: an error payload need not match the success schema.
         let status: Int

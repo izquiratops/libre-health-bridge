@@ -14,6 +14,15 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 summaryCard
+                NavigationLink {
+                    AutomaticSyncView(model: model)
+                } label: {
+                    Label("automatic.title", systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.horizontal, 16)
+                }
+                .accessibilityIdentifier("automatic.open")
+                .groupedCard()
 
                 if model.isSignedIn {
                     connectionSection

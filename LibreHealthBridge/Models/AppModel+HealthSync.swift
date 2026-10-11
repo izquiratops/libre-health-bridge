@@ -20,8 +20,13 @@ extension AppModel {
             guard var saved = session, saved.verifiedPatientID != nil else { return }
             saved.verifiedPatientID = nil
             saved.syncPaused = true
+            saved.automaticEnabled = false
+            saved.automaticEarliest = nil
+            saved.automaticBackoffUntil = nil
+            saved.automaticAttention = false
             try sessionStore.save(saved)
             session = saved
+            reconcileAutomatic()
         } == .success
     }
 
@@ -39,8 +44,13 @@ extension AppModel {
         return await perform {
             guard var saved = session else { return }
             saved.syncPaused = true
+            saved.automaticEnabled = false
+            saved.automaticEarliest = nil
+            saved.automaticBackoffUntil = nil
+            saved.automaticAttention = false
             try sessionStore.save(saved)
             session = saved
+            reconcileAutomatic()
         } == .success
     }
 
@@ -59,7 +69,7 @@ extension AppModel {
     }
 
     @discardableResult
-    func sync(starting: Bool = false) async -> OperationOutcome {
+    func sync(starting: Bool = false, background: Bool = false) async -> OperationOutcome {
         let result = await perform {
             guard isVerified else { throw LocalError.validationRequired }
             guard starting || session?.syncPaused == false else {
@@ -69,9 +79,23 @@ extension AppModel {
             guard healthAccess == .authorized else {
                 throw HealthError.permission
             }
-            guard canStartHealthSync else { throw CloudError.missingConnection }
-            // Always refetch the selected connection. Never import an old preview after an error.
+            if background {
+                guard ownership == .owned, protectedDataAvailable(),
+                    session?.automaticEnabled == true, session?.automaticAttention == false
+                else { throw CancellationError() }
+            }
+            if !background {
+                guard canStartHealthSync else { throw CloudError.missingConnection }
+            }
+            // Always fetch fresh cloud data; never import an old preview after an error.
             try await fetchPreview(persistStatus: false)
+            if background {
+                ownership = await premium.ownership()
+                refreshHealthAccess()
+                guard ownership == .owned, protectedDataAvailable(),
+                    session?.automaticEnabled == true, session?.automaticAttention == false,
+                    isHealthSyncActive else { throw CancellationError() }
+            }
             guard let snapshot, var saved = session,
                 saved.selectedPatientID == snapshot.patientID
             else { throw CloudError.missingConnection }
@@ -84,14 +108,33 @@ extension AppModel {
             )
             if starting { saved.syncPaused = false }
             do {
+                if !background && saved.automaticEnabled {
+                    saved.automaticEarliest = max(
+                        max(now(), saved.lastSync ?? now())
+                            .addingTimeInterval(TimeInterval(saved.automaticInterval * 60)),
+                        saved.automaticBackoffUntil ?? .distantPast
+                    )
+                }
                 try sessionStore.save(saved)
                 session = saved
+                if !background { reconcileAutomatic() }
             } catch {
                 // Do not enable sync when setup could not be saved.
                 if starting { saved.syncPaused = true }
                 session = saved
                 errorMessage = safeMessage(LocalError.statusNotSaved)
             }
+        }
+        if !background, let retry = backgroundRetryAfter, var saved = session,
+           saved.automaticEnabled {
+            saved.automaticBackoffUntil = max(saved.automaticBackoffUntil ?? .distantPast, retry)
+            saved.automaticEarliest = max(saved.automaticEarliest ?? .distantPast, retry)
+            do {
+                try sessionStore.save(saved)
+                session = saved
+                reconcileAutomatic()
+            } catch { automaticMessage = "error.local.statusNotSaved" }
+            backgroundRetryAfter = nil
         }
         return result == .success && errorMessage != nil
             ? .completedWithStorageWarning : result

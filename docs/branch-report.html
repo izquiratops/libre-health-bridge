@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Branch Feature &amp; Change Report</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper: #fbfaf6;
+      --ink: #202721;
+      --muted: #5e695f;
+      --line: #d9ded6;
+      --accent: #176b55;
+      --accent-soft: #e8f2ec;
+      --warning: #8b5715;
+      --warning-soft: #fbf0db;
+      --code: #eef0eb;
+      font: 16px/1.65 ui-serif, Georgia, "Times New Roman", serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #171c19; --ink: #e8eee8; --muted: #aab8ae;
+        --line: #39443d; --accent: #88cdb1; --accent-soft: #20352c;
+        --warning: #e8bc75; --warning-soft: #392d1b; --code: #272e29;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    main { max-width: 850px; margin: 0 auto; padding: 4.5rem 2rem 5rem; }
+    header { border-bottom: 1px solid var(--line); padding-bottom: 2rem; margin-bottom: 2.5rem; }
+    .eyebrow { color: var(--accent); font: 700 .76rem/1.3 ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+    h1, h2, h3 { color: var(--ink); line-height: 1.2; }
+    h1 { font-size: clamp(2.2rem, 6vw, 3.5rem); letter-spacing: -.04em; margin: .65rem 0 1.3rem; }
+    h2 { font-size: 1.55rem; margin: 2.8rem 0 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); }
+    p { margin: .8rem 0; }
+    .meta { color: var(--muted); font: .9rem/1.6 ui-sans-serif, system-ui, sans-serif; }
+    .meta span { display: block; }
+    .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 1rem 1.2rem; margin: 1.5rem 0; }
+    .notice { border-left-color: var(--warning); background: var(--warning-soft); }
+    ul, ol { padding-left: 1.35rem; }
+    li { margin: .62rem 0; padding-left: .15rem; }
+    code { background: var(--code); padding: .12em .35em; border-radius: 4px; font: .88em ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    .status { display: inline-block; border: 1px solid var(--line); border-radius: 99px; padding: .28rem .7rem; color: var(--accent); font: 700 .82rem ui-sans-serif, system-ui, sans-serif; }
+    .small { color: var(--muted); font-size: .92rem; }
+    a { color: var(--accent); }
+    footer { border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; color: var(--muted); font: .84rem ui-sans-serif, system-ui, sans-serif; }
+    @media print {
+      :root { color-scheme: light; --paper: #fff; --ink: #171717; --muted: #444; --line: #bbb; --accent: #205d4d; --accent-soft: #f0f5f1; --warning: #754b12; --warning-soft: #faf4e8; --code: #f2f2f2; }
+      body { background: #fff; }
+      main { max-width: none; padding: 1cm 1.5cm; }
+      h2 { break-after: avoid; }
+      li, .callout { break-inside: avoid; }
+      a { text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Engineering report</div>
+    <h1>Branch Feature &amp; Change Report</h1>
+    <div class="meta">
+      <span><strong>Branch:</strong> <code>feature/recurrent-background-sync</code></span>
+      <span><strong>Compared:</strong> working tree at <code>18bf9ca</code>; <code>main</code> is three commits ahead of the common base</span>
+      <span><strong>State:</strong> uncommitted implementation changes and new files</span>
+    </div>
+    <div class="callout notice"><strong>Scope note:</strong> This report describes the implementation as it exists in the inspected checkout. It does not imply that changes are committed, release-ready, or fully tested.</div>
+  </header>
+
+  <section>
+    <h2>Executive summary</h2>
+    <p>This work adds an optional, one-time-purchase Premium feature for best-effort automatic LibreLinkUp-to-Apple Health syncing in the background. Manual sync remains free. StoreKit 2 handles purchase and ownership; iOS BackgroundTasks requests future opportunities to sync. The feature shares the existing import path and completion timestamp rather than introducing a second importer or a separate sync history.</p>
+    <p>Automatic execution remains subject to iOS scheduling and data-protection constraints. The selected 15-, 30-, or 60-minute interval is an earliest requested delay—not a promise that an import will occur on that schedule.</p>
+  </section>
+
+  <section>
+    <h2>User-facing features</h2>
+    <ul>
+      <li><strong>Premium purchase and restore.</strong> StoreKit 2 non-consumable product <code>com.jordi.librehealthbridge.premium</code>, localized price, purchase and restore actions, verified entitlement checks, and transaction-update observation. Buying Premium does not automatically turn on syncing.</li>
+      <li><strong>Automatic-sync settings.</strong> A new Home-screen entry opens a dedicated settings screen. Premium owners can opt in and choose <strong>15, 30, or 60 minutes</strong> (30 minutes by default). Manual sync remains available without Premium.</li>
+      <li><strong>Clear limitations.</strong> English and Spanish disclosures explain that iOS controls background execution, a locked phone may defer imports (including overnight), and force quit or system settings can prevent attempts. The app is identified as unofficial and not an alarm or treatment-monitoring service.</li>
+      <li><strong>Status and setup gating.</strong> The UI reports off, enabled, deferred, unavailable Background App Refresh, or attention/setup states. Enabling requires verified ownership and an eligible, confirmed health-sync setup.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Implementation overview</h2>
+    <ul>
+      <li><code>LibreHealthBridge/AutomaticSync.swift</code> implements StoreKit ownership and purchase behavior, the BackgroundTasks scheduler adapter, task registration/completion, and automatic-sync orchestration.</li>
+      <li><code>AppModel</code> receives injectable premium, scheduler, clock, and device-state dependencies, creating test seams for system-owned behavior and time.</li>
+      <li>Each scheduled attempt rechecks saved state, entitlement, protected-data availability, profile selection/verification, consent, Health access, pause state, and the requested earliest time. It then uses the existing fresh cloud-fetch, normalization/planning, and Health-write flow.</li>
+      <li>Manual and automatic operations share the same operation guard and <code>lastSync</code> completion state. Successful manual sync moves the next eligible background attempt out by the selected interval. Rate limiting can honor the server's <code>Retry-After</code> date; other failures use a conservative retry delay.</li>
+      <li>Opt-in, interval, next eligible time, backoff, and attention/deferred flags are persisted with the existing session. Automatic sync defaults off for existing sessions. Logout, profile changes, and stop/setup transitions clear consent and reconcile pending work.</li>
+      <li>Cold background launch is kept separate from foreground preview restoration. A callback delivered while the app is active does not import data.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Supporting changes</h2>
+    <ul>
+      <li><code>BridgeCore/CloudClient.swift</code> parses numeric and HTTP-date <code>Retry-After</code> values for rate limits and exposes a dated rate-limit error.</li>
+      <li>Session, model, and health-sync changes align automatic eligibility with profile verification, pause/setup state, Health authorization, and the shared sync operation.</li>
+      <li><code>LibreHealthBridge/Info.plist</code> and the Xcode project add background-task configuration and StoreKit configuration references.</li>
+      <li><code>LibreHealthBridge/SimulatorScenarios.swift</code> adds premium, Background App Refresh, and attention scenarios through injected adapters rather than altering production entitlement behavior.</li>
+      <li>English and Spanish localization files add purchase, settings, status, safety, and limitation text; <code>ios/README.md</code> is updated.</li>
+      <li><code>docs/specs/recurrent-background-sync.md</code> records the product contract, safety rules, acceptance checklist, and release/device limitations.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Test and verification status</h2>
+    <p><span class="status">BridgeCore: passed</span></p>
+    <ul>
+      <li>Ran <code>swift test --package-path BridgeCore --scratch-path "${TMPDIR:-/tmp}/lhb-report-core-tests"</code> successfully.</li>
+      <li>Swift Testing reported <strong>27 tests passed</strong>, including parameterized cases, with no failures. The XCTest summary printed 0 tests because this package suite uses Swift Testing.</li>
+      <li>This verifies BridgeCore only. The iOS app build, app-model tests, UI tests, StoreKit purchase flows, and real iOS background scheduling were not run for this report.</li>
+      <li>App Store Connect setup and live purchase/review are not verified.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Limitations and follow-up checks</h2>
+    <ol>
+      <li>iOS may delay or omit background refresh. A simulator callback or requested interval cannot prove real-world scheduling cadence.</li>
+      <li>Locked-device data protection can defer work. The feature does not promise overnight syncing or automatic foreground catch-up.</li>
+      <li>Confirm product ID, price, availability, and review setup in App Store Connect. The local StoreKit configuration is for testing, not proof of a live product.</li>
+      <li>Run bounded iOS simulator build/model/UI tests, then validate StoreKit restore and revocation in Apple's supported test environment.</li>
+      <li>Test cold background launch, locked-phone deferral, Background App Refresh disabled, force quit, and interrupted Health saves on a dedicated device.</li>
+      <li>The inspected implementation changes are uncommitted. Reconcile the branch with the three commits currently on <code>main</code> after confirming the intended project state.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Key files</h2>
+    <ul>
+      <li><code>LibreHealthBridge/AutomaticSync.swift</code> — purchase, ownership, scheduling, background attempts</li>
+      <li><code>LibreHealthBridge/Views/AutomaticSyncView.swift</code> — purchase/settings/status UI</li>
+      <li><code>LibreHealthBridge/Models/AppModel.swift</code>, <code>AppModel+Session.swift</code>, <code>AppModel+HealthSync.swift</code> — model integration and sync eligibility</li>
+      <li><code>LibreHealthBridge/KeychainStore.swift</code> — persisted automatic-sync preferences</li>
+      <li><code>BridgeCore/Sources/BridgeCore/CloudClient.swift</code> — server retry-delay handling</li>
+      <li><code>LibreHealthBridge/LibreHealthBridgeApp.swift</code>, <code>Info.plist</code>, <code>LibreHealthBridge.xcodeproj/project.pbxproj</code> — lifecycle and platform configuration</li>
+      <li><code>docs/specs/recurrent-background-sync.md</code> — detailed requirements and acceptance checklist</li>
+    </ul>
+  </section>
+
+  <footer>Prepared from the current working tree. Background timing, purchase availability, and device behavior require separate platform and release validation.</footer>
+</main>
+</body>
+</html>

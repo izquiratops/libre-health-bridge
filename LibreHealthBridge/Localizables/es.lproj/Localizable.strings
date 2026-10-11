@@ -40,8 +40,8 @@
 "profile.unnamed" = "Conexión sin nombre";
 "profile.selectPrompt" = "Elige tu perfil para continuar.";
 "sync.start" = "Sincronizar con Salud";
-"sync.explanation" = "Solo sincronización manual. Descarga las lecturas y después guarda las válidas en Salud.";
-"sync.lastCompleted" = "Última sincronización completa";
+"sync.explanation" = "Descarga lecturas recientes y guarda las válidas en Salud. La sincronización automática opcional requiere Premium.";
+"sync.lastCompleted" = "Última actualización";
 "health.name" = "Salud";
 "health.setup.modalTitle" = "Sincronización con Salud";
 "health.setup.title" = "Permite el acceso a Salud";
@@ -51,7 +51,7 @@
 "health.sync.permissionOff" = "El permiso de Salud está desactivado. Permite guardar glucosa para continuar.";
 "health.sync.working" = "Lista para sincronizar manualmente";
 "health.sync.resumeDetail" = "La sincronización está detenida. Abre la configuración de Salud para continuar.";
-"health.setup.explanation" = "Salud guarda las lecturas del sensor en Glucosa en sangre para que puedas consultarlas junto a tus otros datos de salud. Solo se sincronizan cuando pulsas el botón.";
+"health.setup.explanation" = "Salud guarda las lecturas del sensor en Glucosa en sangre para que puedas consultarlas junto a tus otros datos de salud. La sincronización manual se inicia al pulsar el botón; los intentos automáticos opcionales de Premium requieren consentimiento por separado.";
 "health.setup.enableWrites" = "Activa la escritura de Glucosa en sangre en Salud → Tu perfil → Apps → Libre Health Bridge. Después vuelve a intentarlo.";
 "health.setup.sync" = "Confirmar";
 "reading.title" = "Comprueba su valor";
@@ -74,8 +74,8 @@
 "about.analytics.detail" = "Las lecturas descargadas permanecen en memoria hasta que las importas a Salud.";
 "about.healthData.title" = "Los datos de Salud permanecen en Salud";
 "about.healthData.detail" = "Cerrar sesión elimina las credenciales, pero no las muestras de Salud. Gestiona los permisos y tus muestras en Salud.";
-"about.limitations.title" = "Sincronización manual y limitaciones";
-"about.limitations.detail" = "No hay conexión con el sensor, alarmas de glucosa ni garantía de un historial completo. Las consultas en segundo plano están planeadas para un futuro.";
+"about.limitations.title" = "Sincronización y limitaciones";
+"about.limitations.detail" = "No hay conexión con el sensor, alarmas de glucosa ni garantía de un historial completo. Los intentos opcionales de Premium dependen de iOS y pueden no ejecutarse con el teléfono bloqueado.";
 "about.version" = "Versión";
 "health.access.unavailable" = "Salud no está disponible en este dispositivo";
 "health.access.notRequested" = "Permiso aún no solicitado";
@@ -107,3 +107,30 @@
 "error.cloud.wrongPatient" = "La respuesta pertenece a otra conexión. No se importó ninguna lectura.";
 "error.import.invalidStoredVersion" = "Una muestra de Salud existente tiene una versión de sincronización no válida. No se modificó ninguna muestra.";
 "error.unknown" = "La operación falló. No se registraron datos privados. Inténtalo de nuevo.";
+
+/* Automatic background sync */
+"automatic.title" = "Sincronización automática";
+"automatic.intro" = "Premium desbloquea la sincronización automática en segundo plano. La sincronización manual sigue siendo gratis.";
+"automatic.cost" = "El pago único ayuda a cubrir los costes de distribución y desarrollo. No es una suscripción. Puedes solicitar un reembolso a Apple según tus derechos.";
+"automatic.timing" = "iOS controla el trabajo en segundo plano. El intervalo es aproximado; los intentos pueden retrasarse mucho o no ejecutarse. Cerrar la app a la fuerza o cambiar ajustes puede impedirlos.";
+"automatic.locked" = "Un iPhone bloqueado puede retrasar las importaciones, incluso durante la noche. Abrir la app no recupera automáticamente los datos pendientes.";
+"automatic.unofficial" = "No es oficial ni está afiliada a Abbott. El acceso a LibreLinkUp puede cambiar o desaparecer para todos.";
+"automatic.safety" = "No es una alarma de glucosa ni un servicio de seguimiento para tratamientos. Mantén la app oficial para consultar lecturas y alarmas.";
+"automatic.enable" = "Activar sincronización automática";
+"automatic.interval" = "Intervalo solicitado";
+"automatic.15" = "15 minutos";
+"automatic.30" = "30 minutos";
+"automatic.60" = "60 minutos";
+"automatic.buy" = "Desbloquear Premium — %@";
+"automatic.restore" = "Restaurar compras";
+"automatic.productUnavailable" = "Compra no disponible temporalmente. Inténtalo más tarde.";
+"automatic.statusTitle" = "Estado";
+"automatic.off" = "Desactivada";
+"automatic.attention" = "Necesita atención. Revisa tu cuenta, perfil y configuración de Salud.";
+"automatic.deferred" = "No disponible temporalmente; puede solicitarse otro intento más tarde.";
+"automatic.refreshUnavailable" = "Actualización en segundo plano desactivada en los ajustes de iOS. Puede que no se ejecute.";
+"automatic.enabledStatus" = "Activada; iOS controla cuándo se ejecuta.";
+"automatic.setupRequired" = "Conecta tu cuenta, confirma tu perfil, permite escribir en Salud y completa la configuración primero.";
+"automatic.purchaseFailed" = "No se pudo verificar o completar la compra. No se concedió acceso Premium.";
+"automatic.restoreFailed" = "No se puede restaurar ahora. Inténtalo más tarde.";
+"automatic.pending" = "Compra pendiente de aprobación. La sincronización automática seguirá desactivada hasta que Apple verifique la compra.";

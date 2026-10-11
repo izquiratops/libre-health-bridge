@@ -196,6 +196,13 @@ private struct CancelledTransport: CloudTransport {
     #expect(await mock.requests.count == 1)
 }
 
+@Test func rateLimitPreservesValidServerRetryDate() async {
+    let until = Date(timeIntervalSince1970: 2_000_010_000)
+    let mock = MockTransport([HTTPResult(status: 429, data: Data(), retryAfter: until)])
+    await #expect(throws: CloudError.rateLimitedUntil(until)) { try await client(mock).login() }
+    #expect(await mock.requests.count == 1)
+}
+
 @Test func errorBodiesAreNotExposed() async {
     let mock = MockTransport([reply(#"{"status":2,"error":{"message":"SECRET"}}"#)])
     do { try await client(mock).login(); Issue.record("Login unexpectedly succeeded") }

@@ -15,6 +15,7 @@ extension AppModel {
             try await fetchPreview()
         }
         restoration = result == .success ? .loaded : .retryableFailure
+        if result == .success { reconcileAutomatic() }
     }
 
     func login(email: String, password: String) async -> Bool {
@@ -34,6 +35,7 @@ extension AppModel {
             )
             try sessionStore.save(saved)
             session = saved
+            reconcileAutomatic()
             restoration = .loaded
             api = client
             connections = available
@@ -59,9 +61,14 @@ extension AppModel {
             saved.verifiedPatientID = nil
             saved.syncPaused = true
             saved.lastSync = nil
+            saved.automaticEnabled = false
+            saved.automaticEarliest = nil
+            saved.automaticBackoffUntil = nil
+            saved.automaticAttention = false
             isPreviewCurrent = false
             try sessionStore.save(saved)
             session = saved
+            reconcileAutomatic()
             snapshot = nil
             try await fetchPreview(refreshConnections: false)
         }
@@ -83,6 +90,7 @@ extension AppModel {
             try sessionStore.delete()
             api = nil
             session = nil
+            reconcileAutomatic()
             restoration = .idle
             connections = []
             snapshot = nil
@@ -131,11 +139,24 @@ extension AppModel {
         defer {
             isBusy = false
             refreshHealthAccess()
+            finishBusyBackgroundDeferral()
+            if ownership == .notOwned && session?.automaticEnabled == true {
+                Task { await setAutomaticEnabled(false) }
+            }
         }
         do {
             try await operation()
             return .success
         } catch is CancellationError { return .cancelled } catch {
+            if case .rateLimitedUntil(let until) = error as? CloudError {
+                backgroundRetryAfter = until
+            }
+            if let cloud = error as? CloudError {
+                backgroundFailure = cloud == .http(401)
+                    ? "error.cloud.invalidCredentials" : cloud.errorDescription
+            }
+            if let healthError = error as? HealthError { backgroundFailure = healthError.errorDescription }
+            if let local = error as? LocalError { backgroundFailure = local.errorDescription }
             errorMessage = safeMessage(error)
             return .failure
         }

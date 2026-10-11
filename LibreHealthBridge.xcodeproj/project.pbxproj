@@ -29,6 +29,8 @@
 		A00000000000000000000013 /* SimulatorScenarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001C /* SimulatorScenarios.swift */; };
 		A20000000000000000000003 /* SimulatorScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* SimulatorScenarioTests.swift */; };
 		A20000000000000000000002 /* BridgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000002 /* BridgeCore */; };
+		A00000000000000000000014 /* AutomaticSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001D /* AutomaticSync.swift */; };
+		A00000000000000000000015 /* AutomaticSyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001E /* AutomaticSyncView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,6 +78,9 @@
 		F0000000000000000000001C /* SimulatorScenarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorScenarios.swift; sourceTree = "<group>"; };
 		F20000000000000000000003 /* SimulatorScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorScenarioTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 /* LibreHealthBridgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LibreHealthBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0000000000000000000001D /* AutomaticSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticSync.swift; sourceTree = "<group>"; };
+		F0000000000000000000001E /* AutomaticSyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticSyncView.swift; sourceTree = "<group>"; };
+		F0000000000000000000001F /* Premium.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Premium.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +122,8 @@
 				C00000000000000000000005 /* Models */,
 				F00000000000000000000004 /* KeychainStore.swift */,
 				F00000000000000000000005 /* HealthWriter.swift */,
+				F0000000000000000000001D /* AutomaticSync.swift */,
+				F0000000000000000000001F /* Premium.storekit */,
 				F00000000000000000000006 /* Info.plist */,
 				F00000000000000000000007 /* LibreHealthBridge.entitlements */,
 				F00000000000000000000008 /* PrivacyInfo.xcprivacy */,
@@ -142,6 +149,7 @@
 			children = (
 				F00000000000000000000002 /* ContentView.swift */,
 				F0000000000000000000000B /* HomeView.swift */,
+				F0000000000000000000001E /* AutomaticSyncView.swift */,
 				F0000000000000000000000C /* LoginView.swift */,
 				F0000000000000000000000D /* HealthSetupView.swift */,
 				F0000000000000000000000F /* InformationView.swift */,
@@ -323,6 +331,8 @@
 				A00000000000000000000013 /* SimulatorScenarios.swift in Sources */,
 				A00000000000000000000004 /* KeychainStore.swift in Sources */,
 				A00000000000000000000005 /* HealthWriter.swift in Sources */,
+				A00000000000000000000014 /* AutomaticSync.swift in Sources */,
+				A00000000000000000000015 /* AutomaticSyncView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

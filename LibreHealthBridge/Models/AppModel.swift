@@ -1,6 +1,7 @@
 import BridgeCore
 import Foundation
 import Observation
+import UIKit
 
 enum OperationOutcome: Equatable {
     case success, completedWithStorageWarning, cancelled, busy, failure
@@ -32,22 +33,46 @@ final class AppModel {
     var healthAccess: HealthAccess = .notRequested
     var isPreviewCurrent = false
     var restoration: RestorationState = .idle
+    var ownership: PremiumOwnership = .unknown
+    var premiumPrice: String?
+    var isPremiumBusy = false
+    var automaticMessage: String?
+    var backgroundFailure: String?
+    var backgroundRetryAfter: Date?
 
     @ObservationIgnored let sessionStore: any SessionStore
     @ObservationIgnored let health: any GlucoseWriter
     @ObservationIgnored let makeClient: (Credentials) -> any CloudAPI
     @ObservationIgnored var api: (any CloudAPI)?
+    @ObservationIgnored let premium: any PremiumStore
+    @ObservationIgnored let scheduler: any RefreshScheduler
+    @ObservationIgnored let now: () -> Date
+    @ObservationIgnored let protectedDataAvailable: () -> Bool
+    @ObservationIgnored let backgroundRefreshAvailable: () -> Bool
+    @ObservationIgnored var busyBackgroundUntil: Date?
 
     init(
         sessionStore: any SessionStore = KeychainStore(),
         health: any GlucoseWriter = HealthWriter(),
         makeClient: @escaping (Credentials) -> any CloudAPI = {
             LibreCloudClient(credentials: $0)
+        },
+        premium: any PremiumStore = StoreKitPremiumStore(),
+        scheduler: any RefreshScheduler = SystemRefreshScheduler(),
+        now: @escaping () -> Date = Date.init,
+        protectedDataAvailable: @escaping () -> Bool = { UIApplication.shared.isProtectedDataAvailable },
+        backgroundRefreshAvailable: @escaping () -> Bool = {
+            UIApplication.shared.backgroundRefreshStatus == .available
         }
     ) {
         self.sessionStore = sessionStore
         self.health = health
         self.makeClient = makeClient
+        self.premium = premium
+        self.scheduler = scheduler
+        self.now = now
+        self.protectedDataAvailable = protectedDataAvailable
+        self.backgroundRefreshAvailable = backgroundRefreshAvailable
     }
 
     var isSignedIn: Bool { session != nil }

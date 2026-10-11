@@ -23,6 +23,69 @@ final class LibreHealthBridgeUITests: XCTestCase {
     }
 
     @MainActor
+    func testAutomaticPurchaseDisclosureAndRestore() {
+        let app = launch(scenario: "signed-out")
+        app.buttons["automatic.open"].tap()
+        XCTAssertTrue(app.staticTexts["A locked iPhone may defer imports, including overnight. Opening the app does not automatically catch up."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["automatic.buy"].exists)
+        app.buttons["automatic.buy"].tap() // Synthetic cancellation; no real purchase.
+        XCTAssertFalse(app.switches["automatic.enable"].exists)
+        for _ in 0..<5 where !app.buttons["automatic.restore"].exists { app.swipeUp() }
+        XCTAssertTrue(app.buttons["automatic.restore"].waitForExistence(timeout: 5))
+        app.buttons["automatic.restore"].tap()
+        XCTAssertFalse(app.switches["automatic.enable"].exists)
+    }
+
+    @MainActor
+    func testPremiumSettingRequiresSetupAndStopsWithHealthSync() {
+        let blocked = launch(scenario: "premium-setup")
+        blocked.buttons["automatic.open"].tap()
+        for _ in 0..<5 where !blocked.switches["automatic.enable"].exists { blocked.swipeUp() }
+        XCTAssertTrue(blocked.switches["automatic.enable"].waitForExistence(timeout: 5))
+        XCTAssertFalse(blocked.switches["automatic.enable"].isEnabled)
+        blocked.terminate()
+
+        let app = launch(scenario: "premium-ready")
+        app.buttons["automatic.open"].tap()
+        for _ in 0..<5 where !app.switches["automatic.enable"].exists { app.swipeUp() }
+        let toggle = app.switches["automatic.enable"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(toggle.isEnabled)
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.5)).tap()
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "1"), object: toggle)], timeout: 5), .completed)
+        XCTAssertTrue(app.staticTexts["A locked iPhone may defer imports, including overnight. Opening the app does not automatically catch up."].exists)
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Last update"].waitForExistence(timeout: 5))
+        app.buttons["health.stop"].tap()
+        app.buttons["automatic.open"].tap()
+        for _ in 0..<5 where !app.staticTexts["Off"].exists { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Off"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testAutomaticStatusExplainsSystemBlockerAndNeedsAttention() {
+        let blocked = launch(scenario: "premium-refresh-off")
+        blocked.buttons["automatic.open"].tap()
+        for _ in 0..<6 where !blocked.staticTexts.containing(NSPredicate(
+            format: "label CONTAINS %@", "Background App Refresh is disabled")).firstMatch.exists {
+            blocked.swipeUp()
+        }
+        XCTAssertTrue(blocked.staticTexts.containing(NSPredicate(
+            format: "label CONTAINS %@", "Background App Refresh is disabled")).firstMatch.exists)
+        blocked.terminate()
+
+        let attention = launch(scenario: "premium-attention")
+        attention.buttons["automatic.open"].tap()
+        for _ in 0..<6 where !attention.staticTexts.containing(NSPredicate(
+            format: "label CONTAINS %@", "Needs attention")).firstMatch.exists {
+            attention.swipeUp()
+        }
+        XCTAssertTrue(attention.staticTexts.containing(NSPredicate(
+            format: "label CONTAINS %@", "Needs attention")).firstMatch.exists)
+    }
+
+    @MainActor
     func testNativeTabsAndInformationSafety() {
         let app = launch(scenario: "signed-out")
         let tabs = app.tabBars.firstMatch
@@ -107,7 +170,7 @@ final class LibreHealthBridgeUITests: XCTestCase {
             predicate: NSPredicate(format: "enabled == true"), object: importButton)], timeout: 10), .completed)
         importButton.tap()
         XCTAssertTrue(app.buttons["health.stop"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Last completed sync"].exists)
+        XCTAssertTrue(app.staticTexts["Last update"].exists)
     }
 
     @MainActor

@@ -1,0 +1,38 @@
+{
+  "identifier" : "f3683036-6d68-46e5-b93a-0ca42df656e4",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "8514937546",
+      "localizations" : [
+        {
+          "description" : "One-time unlock for optional automatic background sync. Timing is controlled by iOS.",
+          "displayName" : "Premium automatic sync",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Pago único para activar la sincronización automática opcional. iOS controla los horarios.",
+          "displayName" : "Sincronización automática Premium",
+          "locale" : "es_ES"
+        }
+      ],
+      "productID" : "com.jordi.librehealthbridge.premium",
+      "referenceName" : "Premium automatic sync (local testing only)",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [ ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [ ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

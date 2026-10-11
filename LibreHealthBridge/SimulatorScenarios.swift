@@ -3,6 +3,7 @@ import BridgeCore
 import Foundation
 import HealthKit
 import SwiftUI
+import UIKit
 
 // The only launch seam for synthetic journeys. Even an unrecognized flag selects safe
 // adapters; it must never fall through to AppModel's production defaults.
@@ -19,6 +20,8 @@ enum SimulatorScenarios {
         case wrongPatient = "wrong-patient", invalidCredentials = "invalid-credentials"
         case invalidResponse = "invalid-response", secureStorage = "secure-storage"
         case healthSave = "health-save"
+        case premiumReady = "premium-ready", premiumSetup = "premium-setup"
+        case premiumRefreshOff = "premium-refresh-off", premiumAttention = "premium-attention"
     }
 
     private static let patientID = "fixture-patient-01"
@@ -61,14 +64,19 @@ enum SimulatorScenarios {
         case .permissionDenied: access = .denied
         case .healthUnavailable: access = .unavailable
         case .ready, .paused, .error, .missingProfile, .multipleProfiles, .noReading, .staleReading,
+             .premiumReady, .premiumRefreshOff, .premiumAttention,
              .termsRequired, .rateLimited, .wrongPatient, .invalidCredentials,
              .invalidResponse, .secureStorage, .healthSave: access = .authorized
-        case .signedOut, .setup, .noProfiles, nil: access = .notRequested
+        case .signedOut, .setup, .premiumSetup, .noProfiles, nil: access = .notRequested
         }
         let backend = ScenarioHealthStore(access: access, failsSave: scenario == .healthSave)
         let model = AppModel(sessionStore: store, health: HealthWriter(backend: backend), makeClient: { credentials in
             ScenarioClient(credentials: credentials, scenario: scenario)
-        })
+        }, premium: ScenarioPremiumStore(owned: [.premiumReady, .premiumSetup, .premiumRefreshOff,
+                                                  .premiumAttention].contains(scenario)),
+           scheduler: ScenarioRefreshScheduler(),
+           backgroundRefreshAvailable: { scenario != .premiumRefreshOff &&
+               UIApplication.shared.backgroundRefreshStatus == .available })
         model.restoration = .loaded
         model.refreshHealthAccess()
         guard let scenario else {
@@ -76,13 +84,17 @@ enum SimulatorScenarios {
             return Composition(model: model, scenario: nil)
         }
         guard scenario != .signedOut else { return Composition(model: model, scenario: scenario) }
-        let ready = scenario != .setup && scenario != .noProfiles &&
+        let ready = scenario != .setup && scenario != .premiumSetup && scenario != .noProfiles &&
             scenario != .noReading && scenario != .staleReading
-        let saved = SavedSession(credentials: credentials,
+        var saved = SavedSession(credentials: credentials,
             selectedPatientID: scenario == .noProfiles ? nil : patientID,
             verifiedPatientID: ready ? patientID : nil,
             lastSync: ready ? completedAt : nil,
             syncPaused: !ready || scenario == .paused)
+        if scenario == .premiumRefreshOff || scenario == .premiumAttention {
+            saved.automaticEnabled = true
+            saved.automaticAttention = scenario == .premiumAttention
+        }
         store.seed(saved)
         model.session = saved
         model.connections = scenario == .noProfiles || scenario == .missingProfile ? [] :
@@ -105,6 +117,20 @@ enum SimulatorScenarios {
         if scenario == .secureStorage { store.failsSave = true }
         return Composition(model: model, scenario: scenario)
     }
+}
+
+@MainActor private struct ScenarioRefreshScheduler: RefreshScheduler {
+    func replace(earliest: Date?) throws { }
+}
+
+@MainActor private final class ScenarioPremiumStore: PremiumStore {
+    let owned: Bool
+    init(owned: Bool) { self.owned = owned }
+    func ownership() async -> PremiumOwnership { owned ? .owned : .notOwned }
+    func price() async throws -> String { "$2.99" } // Synthetic UI price only.
+    func purchase() async throws -> PurchaseOutcome { .cancelled }
+    func restore() async throws { }
+    func observe(_ changed: @escaping @MainActor () async -> Void) { }
 }
 
 @MainActor
