@@ -1,3 +1,4 @@
 {
-  "editor.default_syntax" : "swift"
+  "editor.default_syntax" : "swift",
+  "workspace.name" : "Libre Health Bridge"
 }
