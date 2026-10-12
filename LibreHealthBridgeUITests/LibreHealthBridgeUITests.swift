@@ -54,6 +54,8 @@ final class LibreHealthBridgeUITests: XCTestCase {
         toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.5)).tap()
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "1"), object: toggle)], timeout: 5), .completed)
+        for _ in 0..<6 where !app.staticTexts["automatic.status"].exists { app.swipeUp() }
+        XCTAssertEqual(app.staticTexts["automatic.status"].label, "Enabled; timing managed by iOS.")
         XCTAssertTrue(app.staticTexts["A locked iPhone may defer imports, including overnight. Opening the app does not automatically catch up."].exists)
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Last update"].waitForExistence(timeout: 5))
@@ -73,6 +75,8 @@ final class LibreHealthBridgeUITests: XCTestCase {
         }
         XCTAssertTrue(blocked.staticTexts.containing(NSPredicate(
             format: "label CONTAINS %@", "Background App Refresh is disabled")).firstMatch.exists)
+        XCTAssertEqual(blocked.staticTexts["automatic.status"].label,
+                       "Background App Refresh is disabled in iOS settings. Automatic attempts may not run.")
         blocked.terminate()
 
         let attention = launch(scenario: "premium-attention")
@@ -83,6 +87,15 @@ final class LibreHealthBridgeUITests: XCTestCase {
         }
         XCTAssertTrue(attention.staticTexts.containing(NSPredicate(
             format: "label CONTAINS %@", "Needs attention")).firstMatch.exists)
+        XCTAssertEqual(attention.staticTexts["automatic.status"].label,
+                       "Needs attention. Check your account, profile and Health setup.")
+        attention.terminate()
+
+        let deferred = launch(scenario: "premium-deferred")
+        deferred.buttons["automatic.open"].tap()
+        for _ in 0..<6 where !deferred.staticTexts["automatic.status"].exists { deferred.swipeUp() }
+        XCTAssertEqual(deferred.staticTexts["automatic.status"].label,
+                       "Temporarily unavailable; a later attempt may be requested.")
     }
 
     @MainActor

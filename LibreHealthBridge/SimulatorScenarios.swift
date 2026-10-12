@@ -22,6 +22,9 @@ enum SimulatorScenarios {
         case healthSave = "health-save"
         case premiumReady = "premium-ready", premiumSetup = "premium-setup"
         case premiumRefreshOff = "premium-refresh-off", premiumAttention = "premium-attention"
+        case premiumDeferred = "premium-deferred"
+
+        var backgroundRefreshAvailable: Bool { self != .premiumRefreshOff }
     }
 
     private static let patientID = "fixture-patient-01"
@@ -64,7 +67,7 @@ enum SimulatorScenarios {
         case .permissionDenied: access = .denied
         case .healthUnavailable: access = .unavailable
         case .ready, .paused, .error, .missingProfile, .multipleProfiles, .noReading, .staleReading,
-             .premiumReady, .premiumRefreshOff, .premiumAttention,
+             .premiumReady, .premiumRefreshOff, .premiumAttention, .premiumDeferred,
              .termsRequired, .rateLimited, .wrongPatient, .invalidCredentials,
              .invalidResponse, .secureStorage, .healthSave: access = .authorized
         case .signedOut, .setup, .premiumSetup, .noProfiles, nil: access = .notRequested
@@ -73,10 +76,9 @@ enum SimulatorScenarios {
         let model = AppModel(sessionStore: store, health: HealthWriter(backend: backend), makeClient: { credentials in
             ScenarioClient(credentials: credentials, scenario: scenario)
         }, premium: ScenarioPremiumStore(owned: [.premiumReady, .premiumSetup, .premiumRefreshOff,
-                                                  .premiumAttention].contains(scenario)),
+                                                  .premiumAttention, .premiumDeferred].contains(scenario)),
            scheduler: ScenarioRefreshScheduler(),
-           backgroundRefreshAvailable: { scenario != .premiumRefreshOff &&
-               UIApplication.shared.backgroundRefreshStatus == .available })
+           backgroundRefreshAvailable: { scenario?.backgroundRefreshAvailable ?? true })
         model.restoration = .loaded
         model.refreshHealthAccess()
         guard let scenario else {
@@ -91,9 +93,10 @@ enum SimulatorScenarios {
             verifiedPatientID: ready ? patientID : nil,
             lastSync: ready ? completedAt : nil,
             syncPaused: !ready || scenario == .paused)
-        if scenario == .premiumRefreshOff || scenario == .premiumAttention {
+        if scenario == .premiumRefreshOff || scenario == .premiumAttention || scenario == .premiumDeferred {
             saved.automaticEnabled = true
             saved.automaticAttention = scenario == .premiumAttention
+            saved.automaticDeferred = scenario == .premiumDeferred
         }
         store.seed(saved)
         model.session = saved

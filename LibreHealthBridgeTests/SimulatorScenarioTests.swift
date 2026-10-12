@@ -143,6 +143,31 @@ final class SimulatorScenarioTests: XCTestCase {
         XCTAssertEqual(connectionCalls, 1)
     }
 
+    func testAutomaticSyncFixturesControlRefreshAvailabilityAndStatus() async {
+        let ready = await scenario("premium-ready")
+        await ready.refreshPremium()
+        XCTAssertTrue(ready.backgroundRefreshAvailable())
+        var readySession = ready.session!
+        readySession.automaticEnabled = true
+        ready.session = readySession
+        XCTAssertEqual(ready.automaticStatus, "automatic.enabledStatus")
+
+        let deferred = await scenario("premium-deferred")
+        await deferred.refreshPremium()
+        XCTAssertTrue(deferred.backgroundRefreshAvailable())
+        XCTAssertEqual(deferred.automaticStatus, "automatic.deferred")
+
+        let unavailable = await scenario("premium-refresh-off")
+        await unavailable.refreshPremium()
+        XCTAssertFalse(unavailable.backgroundRefreshAvailable())
+        XCTAssertEqual(unavailable.automaticStatus, "automatic.refreshUnavailable")
+
+        let attention = await scenario("premium-attention")
+        await attention.refreshPremium()
+        XCTAssertTrue(attention.backgroundRefreshAvailable())
+        XCTAssertEqual(attention.automaticStatus, "automatic.attention")
+    }
+
     func testDeniedAndWrongPatientCannotImport() async {
         let denied = await scenario("permission-denied")
         XCTAssertEqual(denied.healthAccess, .denied)
