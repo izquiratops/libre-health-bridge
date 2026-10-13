@@ -29,7 +29,10 @@
 		A00000000000000000000013 /* SimulatorScenarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001C /* SimulatorScenarios.swift */; };
 		A20000000000000000000003 /* SimulatorScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* SimulatorScenarioTests.swift */; };
 		A20000000000000000000002 /* BridgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000002 /* BridgeCore */; };
-		A00000000000000000000014 /* AutomaticSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001D /* AutomaticSync.swift */; };
+		A00000000000000000000014 /* AppModel+AutomaticSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001D /* AppModel+AutomaticSync.swift */; };
+		A00000000000000000000016 /* PremiumStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000020 /* PremiumStore.swift */; };
+		A00000000000000000000017 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000021 /* BackgroundRefresh.swift */; };
+		A00000000000000000000018 /* AppModel+Premium.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000022 /* AppModel+Premium.swift */; };
 		A00000000000000000000015 /* AutomaticSyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001E /* AutomaticSyncView.swift */; };
 /* End PBXBuildFile section */
 
@@ -78,7 +81,10 @@
 		F0000000000000000000001C /* SimulatorScenarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorScenarios.swift; sourceTree = "<group>"; };
 		F20000000000000000000003 /* SimulatorScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorScenarioTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 /* LibreHealthBridgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LibreHealthBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F0000000000000000000001D /* AutomaticSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticSync.swift; sourceTree = "<group>"; };
+		F0000000000000000000001D /* AppModel+AutomaticSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+AutomaticSync.swift"; sourceTree = "<group>"; };
+		F00000000000000000000020 /* PremiumStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumStore.swift; sourceTree = "<group>"; };
+		F00000000000000000000021 /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
+		F00000000000000000000022 /* AppModel+Premium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Premium.swift"; sourceTree = "<group>"; };
 		F0000000000000000000001E /* AutomaticSyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticSyncView.swift; sourceTree = "<group>"; };
 		F0000000000000000000001F /* Premium.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Premium.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -122,7 +128,8 @@
 				C00000000000000000000005 /* Models */,
 				F00000000000000000000004 /* KeychainStore.swift */,
 				F00000000000000000000005 /* HealthWriter.swift */,
-				F0000000000000000000001D /* AutomaticSync.swift */,
+				F00000000000000000000020 /* PremiumStore.swift */,
+				F00000000000000000000021 /* BackgroundRefresh.swift */,
 				F0000000000000000000001F /* Premium.storekit */,
 				F00000000000000000000006 /* Info.plist */,
 				F00000000000000000000007 /* LibreHealthBridge.entitlements */,
@@ -164,6 +171,8 @@
 				F00000000000000000000003 /* AppModel.swift */,
 				F0000000000000000000001A /* AppModel+Session.swift */,
 				F0000000000000000000001B /* AppModel+HealthSync.swift */,
+				F0000000000000000000001D /* AppModel+AutomaticSync.swift */,
+				F00000000000000000000022 /* AppModel+Premium.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -331,7 +340,10 @@
 				A00000000000000000000013 /* SimulatorScenarios.swift in Sources */,
 				A00000000000000000000004 /* KeychainStore.swift in Sources */,
 				A00000000000000000000005 /* HealthWriter.swift in Sources */,
-				A00000000000000000000014 /* AutomaticSync.swift in Sources */,
+				A00000000000000000000014 /* AppModel+AutomaticSync.swift in Sources */,
+				A00000000000000000000016 /* PremiumStore.swift in Sources */,
+				A00000000000000000000017 /* BackgroundRefresh.swift in Sources */,
+				A00000000000000000000018 /* AppModel+Premium.swift in Sources */,
 				A00000000000000000000015 /* AutomaticSyncView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
