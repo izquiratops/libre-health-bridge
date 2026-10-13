@@ -20,10 +20,7 @@ extension AppModel {
             guard var saved = session, saved.verifiedPatientID != nil else { return }
             saved.verifiedPatientID = nil
             saved.syncPaused = true
-            saved.automaticEnabled = false
-            saved.automaticEarliest = nil
-            saved.automaticBackoffUntil = nil
-            saved.automaticAttention = false
+            saved.resetAutomaticSyncConsent()
             try sessionStore.save(saved)
             session = saved
             reconcileAutomatic()
@@ -44,10 +41,7 @@ extension AppModel {
         return await perform {
             guard var saved = session else { return }
             saved.syncPaused = true
-            saved.automaticEnabled = false
-            saved.automaticEarliest = nil
-            saved.automaticBackoffUntil = nil
-            saved.automaticAttention = false
+            saved.resetAutomaticSyncConsent()
             try sessionStore.save(saved)
             session = saved
             reconcileAutomatic()
