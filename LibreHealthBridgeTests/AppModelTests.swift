@@ -1049,6 +1049,104 @@ private final class CompletionProbe: @unchecked Sendable {
     #expect(app.automaticMessage == "error.local.statusNotSaved")
 }
 
+@Test @MainActor func automaticFailuresUseTypedCategoriesWithoutChangingPresentedErrors() async {
+    let cases: [(any Error, AutomaticSyncFailure)] = [
+        (CloudError.invalidCredentials, .invalidCredentials),
+        (CloudError.http(401), .invalidCredentials),
+        (CloudError.termsRequired, .termsRequired),
+        (CloudError.missingConnection, .missingProfile),
+        (LocalError.validationRequired, .confirmationRequired),
+        (HealthError.permission, .healthPermissionDenied),
+        (CloudError.network, .temporary),
+        (CloudError.http(503), .temporary),
+        (CloudError.api(42), .temporary),
+        (CloudError.rateLimited, .temporary),
+        (CloudError.rateLimitedUntil(.distantFuture), .temporary),
+        (CloudError.wrongPatient, .temporary),
+        (LocalError.keychain, .temporary),
+        (LocalError.statusNotSaved, .temporary),
+        (HealthError.unavailable, .temporary),
+        (HealthError.query, .temporary),
+        (HealthError.save, .temporary),
+        (URLError(.notConnectedToInternet), .temporary)
+    ]
+    let time = Date(timeIntervalSince1970: 2_000_000_000)
+    for (error, category) in cases {
+        let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+        let premium = PremiumFixture(), scheduler = SchedulerFixture()
+        premium.state = .owned
+        let app = automaticFixture(store, premium, scheduler, { time })
+        await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+        let outcome = await app.perform { throw error }
+        #expect(outcome == .failure)
+        #expect(app.backgroundFailure == category)
+        #expect(app.errorMessage == app.safeMessage(error)) // Manual presentation stays unchanged.
+        app.automaticAttemptFinished(outcome, failure: app.backgroundFailure)
+        let attention = category != .temporary
+        let needsSetup = [AutomaticSyncFailure.missingProfile, .confirmationRequired, .healthPermissionDenied]
+            .contains(category)
+        #expect(store.saved?.automaticEnabled == true)
+        #expect(store.saved?.automaticAttention == attention)
+        #expect(store.saved?.syncPaused == needsSetup)
+        #expect(store.saved?.automaticDeferred == true)
+        let retry: Date
+        if case CloudError.rateLimitedUntil(let until) = error {
+            retry = max(time.addingTimeInterval(3600), until)
+        } else {
+            retry = time.addingTimeInterval(3600)
+        }
+        #expect(store.saved?.automaticBackoffUntil == retry)
+        #expect(scheduler.pending == (attention ? nil : retry))
+        #expect(store.saved?.lastSync == nil)
+    }
+}
+
+@Test @MainActor func typedFailuresKeepEnglishAndSpanishPresentationMappings() throws {
+    let messages: [(any LocalizedError, String, String)] = [
+        (CloudError.invalidCredentials,
+         "Login failed. Check your credentials in the official LibreLinkUp app.",
+         "Error al iniciar sesión. Revisa tus credenciales en la app oficial LibreLinkUp."),
+        (CloudError.termsRequired,
+         "Open LibreLinkUp and review its required terms. This app cannot accept terms for you.",
+         "Abre LibreLinkUp y revisa sus condiciones obligatorias. Esta app no puede aceptarlas por ti."),
+        (LocalError.validationRequired,
+         "Confirm your own profile and compare the reading with LibreLinkUp.",
+         "Confirma tu perfil y compara la lectura con LibreLinkUp."),
+        (HealthError.permission,
+         "Enable glucose writes in Health → Profile → Apps (Privacy) → Libre Health Bridge.",
+         "Activa la escritura de glucosa en Salud → Perfil → Apps (Privacidad) → Libre Health Bridge.")
+    ]
+    for language in ["en", "es"] {
+        let path = try #require(Bundle.main.path(forResource: language, ofType: "lproj"))
+        let bundle = try #require(Bundle(path: path))
+        for (error, english, spanish) in messages {
+            let key = try #require(error.errorDescription)
+            #expect(bundle.localizedString(forKey: key, value: nil, table: nil)
+                    == (language == "en" ? english : spanish))
+        }
+    }
+}
+
+@Test @MainActor func automaticCancellationDefersWithoutAttentionOrErrorFeedback() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture()
+    premium.state = .owned
+    let time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time })
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    let outcome = await app.perform { throw CancellationError() }
+    #expect(outcome == .cancelled)
+    #expect(app.backgroundFailure == nil)
+    #expect(app.errorMessage == nil)
+    app.automaticAttemptFinished(outcome)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(store.saved?.automaticAttention == false)
+    #expect(store.saved?.syncPaused == false)
+    #expect(store.saved?.automaticDeferred == true)
+    #expect(scheduler.pending == time.addingTimeInterval(3600))
+    #expect(store.saved?.lastSync == nil)
+}
+
 @Test @MainActor func unavailableProductDoesNotChangeOwnershipOrConsent() async {
     let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
     let premium = PremiumFixture(), scheduler = SchedulerFixture()

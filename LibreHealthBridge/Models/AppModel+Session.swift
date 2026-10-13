@@ -151,12 +151,7 @@ extension AppModel {
             if case .rateLimitedUntil(let until) = error as? CloudError {
                 backgroundRetryAfter = until
             }
-            if let cloud = error as? CloudError {
-                backgroundFailure = cloud == .http(401)
-                    ? "error.cloud.invalidCredentials" : cloud.errorDescription
-            }
-            if let healthError = error as? HealthError { backgroundFailure = healthError.errorDescription }
-            if let local = error as? LocalError { backgroundFailure = local.errorDescription }
+            backgroundFailure = AutomaticSyncFailure(error)
             errorMessage = safeMessage(error)
             return .failure
         }

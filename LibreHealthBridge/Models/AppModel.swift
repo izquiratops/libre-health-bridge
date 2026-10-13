@@ -7,6 +7,35 @@ enum OperationOutcome: Equatable {
     case success, completedWithStorageWarning, cancelled, busy, failure
 }
 
+// Failure policy uses domain categories, never presentation/localization identifiers.
+// Cancellation remains a separate OperationOutcome and does not become an error message.
+enum AutomaticSyncFailure: Equatable {
+    case invalidCredentials, termsRequired, missingProfile, confirmationRequired
+    case healthPermissionDenied, temporary
+
+    init(_ error: any Error) {
+        switch error {
+        case CloudError.invalidCredentials, CloudError.http(401): self = .invalidCredentials
+        case CloudError.termsRequired: self = .termsRequired
+        case CloudError.missingConnection: self = .missingProfile
+        case LocalError.validationRequired: self = .confirmationRequired
+        case HealthError.permission: self = .healthPermissionDenied
+        default: self = .temporary
+        }
+    }
+
+    var requiresSetup: Bool {
+        switch self {
+        case .missingProfile, .confirmationRequired, .healthPermissionDenied: true
+        case .invalidCredentials, .termsRequired, .temporary: false
+        }
+    }
+
+    var requiresAttention: Bool {
+        self != .temporary
+    }
+}
+
 enum PrimaryHealthAction {
     case openSetup, syncSucceeded, stay
 }
@@ -37,7 +66,7 @@ final class AppModel {
     var premiumPrice: String?
     var isPremiumBusy = false
     var automaticMessage: String?
-    var backgroundFailure: String?
+    var backgroundFailure: AutomaticSyncFailure?
     var backgroundRetryAfter: Date?
 
     @ObservationIgnored let sessionStore: any SessionStore
