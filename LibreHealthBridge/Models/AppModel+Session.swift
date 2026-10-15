@@ -61,10 +61,7 @@ extension AppModel {
             saved.verifiedPatientID = nil
             saved.syncPaused = true
             saved.lastSync = nil
-            saved.automaticEnabled = false
-            saved.automaticEarliest = nil
-            saved.automaticBackoffUntil = nil
-            saved.automaticAttention = false
+            saved.resetAutomaticSyncConsent()
             isPreviewCurrent = false
             try sessionStore.save(saved)
             session = saved

@@ -17,6 +17,16 @@ struct SavedSession: Codable {
     var automaticAttention: Bool = false
     var automaticDeferred: Bool = false
 
+    // Explicit consent withdrawal keeps profile/setup semantics with the caller.
+    // Mutate a copy, then save it before publishing the reset to the model.
+    mutating func resetAutomaticSyncConsent() {
+        automaticEnabled = false
+        automaticEarliest = nil
+        automaticBackoffUntil = nil
+        automaticAttention = false
+        automaticDeferred = false
+    }
+
     enum CodingKeys: String, CodingKey {
         case credentials, selectedPatientID, verifiedPatientID, lastSync, report, syncPaused
         case automaticEnabled, automaticInterval, automaticEarliest, automaticBackoffUntil, automaticAttention

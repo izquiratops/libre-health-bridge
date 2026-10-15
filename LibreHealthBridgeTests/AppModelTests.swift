@@ -1147,6 +1147,146 @@ private final class CompletionProbe: @unchecked Sendable {
     #expect(store.saved?.lastSync == nil)
 }
 
+enum ConsentResetAction: CaseIterable {
+    case stop, profileChange, withdrawConfirmation, disableAutomatic
+
+    @MainActor func apply(to app: AppModel) async {
+        switch self {
+        case .stop: _ = await app.stopHealthSync()
+        case .profileChange: await app.selectConnection("patient-b")
+        case .withdrawConfirmation: _ = await app.revokePreviewConfirmation()
+        case .disableAutomatic: await app.setAutomaticEnabled(false)
+        }
+    }
+}
+
+@Test @MainActor func consentResetChangesOnlyAutomaticConsentAndSchedulingState() throws {
+    var saved = session(selected: "patient-a", verified: "patient-a")
+    let completion = Date(timeIntervalSince1970: 2_000_000_000)
+    saved.lastSync = completion
+    saved.automaticInterval = 60
+    saved.automaticEnabled = true
+    saved.automaticEarliest = completion
+    saved.automaticBackoffUntil = completion
+    saved.automaticAttention = true
+    saved.automaticDeferred = true
+    let credentials = saved.credentials
+    saved.resetAutomaticSyncConsent()
+    #expect(!saved.automaticEnabled)
+    #expect(saved.automaticEarliest == nil)
+    #expect(saved.automaticBackoffUntil == nil)
+    #expect(!saved.automaticAttention)
+    #expect(!saved.automaticDeferred)
+    #expect(saved.automaticInterval == 60)
+    #expect(saved.credentials.email == credentials.email)
+    #expect(saved.credentials.password == credentials.password)
+    #expect(saved.selectedPatientID == "patient-a")
+    #expect(saved.verifiedPatientID == "patient-a")
+    #expect(saved.lastSync == completion)
+    #expect(!saved.syncPaused)
+    let restored = try JSONDecoder().decode(SavedSession.self, from: JSONEncoder().encode(saved))
+    #expect(!restored.automaticEnabled)
+    #expect(!restored.automaticDeferred)
+}
+
+@Test(arguments: ConsentResetAction.allCases) @MainActor
+func consentResetActionsPersistOffCancelPendingWorkAndPreserveHealthSamples(action: ConsentResetAction) async throws {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture()
+    let backend = RecordingHealthStore()
+    premium.state = .owned
+    let time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: HealthWriter(backend: backend))
+    await app.restore(); await app.refreshPremium()
+    #expect(await app.sync() == .success)
+    let sample = try #require(backend.samples.values.first)
+    let completion = try #require(store.saved?.lastSync)
+    await app.setAutomaticEnabled(true)
+    // Seed all scheduling flags and a stale system request before each reset action.
+    store.saved?.automaticInterval = 60
+    store.saved?.automaticBackoffUntil = time.addingTimeInterval(7200)
+    store.saved?.automaticDeferred = true
+    store.saved?.automaticAttention = true
+    app.session = store.saved
+    try scheduler.replace(earliest: time.addingTimeInterval(7200))
+    await action.apply(to: app)
+    for saved in [try #require(store.saved), try #require(app.session)] {
+        #expect(!saved.automaticEnabled)
+        #expect(saved.automaticEarliest == nil)
+        #expect(saved.automaticBackoffUntil == nil)
+        #expect(!saved.automaticAttention)
+        #expect(!saved.automaticDeferred)
+        #expect(saved.automaticInterval == 60)
+        #expect(saved.syncPaused == (action != .disableAutomatic))
+        #expect(saved.selectedPatientID == (action == .profileChange ? "patient-b" : "patient-a"))
+        #expect(saved.verifiedPatientID == (action == .stop || action == .disableAutomatic ? "patient-a" : nil))
+        #expect(saved.lastSync == (action == .profileChange ? nil : completion))
+    }
+    #expect(app.errorMessage == nil)
+    #expect(scheduler.pending == nil)
+    let lastRequest = try #require(scheduler.requests.last)
+    #expect(lastRequest == nil)
+    #expect(await app.backgroundAttempt() == .failure) // A stale callback cannot import.
+    #expect(backend.saveAttempts == 1)
+    #expect(backend.samples.count == 1)
+    #expect(backend.samples.values.first?.uuid == sample.uuid)
+}
+
+@Test(arguments: ConsentResetAction.allCases) @MainActor
+func failedConsentResetActionsRetainConsentAndPendingWork(action: ConsentResetAction) async throws {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    let time = Date(timeIntervalSince1970: 2_000_000_000)
+    let app = automaticFixture(store, premium, scheduler, { time }, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    store.saved?.automaticInterval = 60
+    store.saved?.automaticBackoffUntil = time.addingTimeInterval(7200)
+    store.saved?.automaticDeferred = true
+    store.saved?.automaticAttention = true
+    app.session = store.saved
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let retained = try encoder.encode(try #require(store.saved))
+    let pending = scheduler.pending
+    let requests = scheduler.requests.count
+    store.failSave = true
+    await action.apply(to: app)
+    #expect(try encoder.encode(try #require(store.saved)) == retained)
+    #expect(try encoder.encode(try #require(app.session)) == retained)
+    #expect(scheduler.pending == (action == .disableAutomatic ? nil : pending))
+    #expect(scheduler.requests.count == requests + (action == .disableAutomatic ? 1 : 0))
+    // The toggle reconciles the retained attention state, so it cancels a stale request.
+    if action == .disableAutomatic {
+        #expect(app.automaticMessage == "error.local.statusNotSaved")
+    } else {
+        #expect(app.errorMessage == app.safeMessage(LocalError.keychain))
+    }
+    #expect(health.writes == 0)
+}
+
+@Test @MainActor func changedProfileRequiresSetupAndRenewedExplicitAutomaticOptIn() async {
+    let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
+    let premium = PremiumFixture(), scheduler = SchedulerFixture(), health = FakeWriter()
+    premium.state = .owned
+    let app = automaticFixture(store, premium, scheduler, { Date(timeIntervalSince1970: 2_000_000_000) }, health: health)
+    await app.restore(); await app.refreshPremium(); await app.setAutomaticEnabled(true)
+    await app.selectConnection("patient-b")
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticEnabled == false)
+    #expect(scheduler.pending == nil)
+    #expect(health.writes == 0)
+    await app.selectConnection("patient-a") // This fixture has a valid preview.
+    #expect(await app.confirmPreview())
+    #expect(await app.sync(starting: true) == .success)
+    #expect(store.saved?.automaticEnabled == false) // Setup cannot restore withdrawn consent.
+    #expect(scheduler.pending == nil)
+    await app.setAutomaticEnabled(true)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(scheduler.pending != nil)
+    #expect(health.writes == 1) // Opt-in did not import.
+}
+
 @Test @MainActor func unavailableProductDoesNotChangeOwnershipOrConsent() async {
     let store = MemoryStore(); store.saved = session(selected: "patient-a", verified: "patient-a")
     let premium = PremiumFixture(), scheduler = SchedulerFixture()
