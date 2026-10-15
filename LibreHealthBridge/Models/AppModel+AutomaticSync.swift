@@ -22,12 +22,11 @@ extension AppModel {
             refreshHealthAccess()
             guard canEnableAutomatic else { automaticMessage = "automatic.setupRequired"; return }
         }
-        saved.automaticEnabled = enabled
-        saved.automaticAttention = false
-        saved.automaticDeferred = false
-        saved.automaticBackoffUntil = nil
-        saved.automaticEarliest = enabled
-            ? now().addingTimeInterval(TimeInterval(saved.automaticInterval * 60)) : nil
+        saved.resetAutomaticSyncConsent()
+        if enabled {
+            saved.automaticEnabled = true
+            saved.automaticEarliest = now().addingTimeInterval(TimeInterval(saved.automaticInterval * 60))
+        }
         do {
             try sessionStore.save(saved)
             session = saved
