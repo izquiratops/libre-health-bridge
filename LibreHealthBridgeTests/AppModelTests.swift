@@ -756,6 +756,32 @@ private final class CompletionProbe: @unchecked Sendable {
     var values: [Bool] { lock.lock(); defer { lock.unlock() }; return outcomes }
 }
 
+@Test(arguments: [true, false]) func backgroundNormalCompletionWinsOverLateExpiration(success: Bool) {
+    let probe = CompletionProbe()
+    let completion = RefreshCompletion { probe.record($0) }
+    #expect(completion.finish(success))
+    #expect(!completion.finish(!success))
+    #expect(!completion.reserveExpiration())
+    completion.finishExpiration()
+    #expect(probe.values == [success])
+}
+
+@Test func concurrentBackgroundCompletionAndExpirationCompleteOnlyOnce() async {
+    let probe = CompletionProbe()
+    let completion = RefreshCompletion { probe.record($0) }
+    await withTaskGroup(of: Void.self) { group in
+        for _ in 0..<32 {
+            group.addTask { completion.finish(true) }
+            group.addTask {
+                if completion.reserveExpiration() { completion.finishExpiration() }
+            }
+        }
+    }
+    #expect(probe.values.count == 1)
+    #expect(!completion.finish(false))
+    #expect(!completion.reserveExpiration())
+}
+
 @Test func backgroundExpirationCompletesOnlyOnce() {
     let probe = CompletionProbe()
     let completion = RefreshCompletion { probe.record($0) }

@@ -200,6 +200,11 @@ The cloud interface is unofficial and can change. This app is not affiliated wit
 ## Source layout
 
 - `LibreHealthBridge/`: SwiftUI screens, application state, Keychain, and HealthKit adapter.
+  - `PremiumStore.swift`: injectable Premium interface and StoreKit ownership, purchase, restore, and transaction handling.
+  - `BackgroundRefresh.swift`: injectable scheduler, early task registration, expiration, and exactly-once task completion.
+  - `Models/AppModel+Premium.swift`: Premium actions and displayed purchase state; purchase does not enable automatic sync.
+  - `Models/AppModel+AutomaticSync.swift`: consent, eligibility, scheduling, and persisted retry policy.
+  - `Models/AppModel+HealthSync.swift`: one shared manual/background import operation and Last update state.
 - `BridgeCore/`: cloud protocol, timestamp normalization, and import planner.
 - `BridgeCore/Tests/`: tests that run on the Mac without an iPhone or simulator.
 - `LibreHealthBridge.xcodeproj/`: Xcode project and shared scheme.
