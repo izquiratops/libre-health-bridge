@@ -143,7 +143,7 @@ struct HomeView: View {
                     ? (readyForSync
                         ? "sync.explanation"
                         : model.session?.syncPaused == true
-                            ? "health.sync.resumeDetail" : "checklist.sync.setupDetail")
+                        ? "health.sync.resumeDetail" : "checklist.sync.setupDetail")
                     : "checklist.intro"
             )
             .font(.subheadline)
@@ -175,7 +175,7 @@ struct HomeView: View {
                         !model.isSignedIn
                             ? "login.submit"
                             : readyForSync
-                                ? "sync.start" : "checklist.sync.configure"
+                            ? "sync.start" : "checklist.sync.configure"
                     )
                 }
                 .font(.headline)

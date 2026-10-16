@@ -249,7 +249,7 @@ private final class RecordingHealthStore: GlucoseHealthStore {
                                transport: transport)
     let connection = try #require(try await api.connections().first)
     let snapshot = try await api.snapshot(for: connection,
-        now: TimestampParser.parse("10/6/2026 7:00:00 AM")!)
+                                          now: TimestampParser.parse("10/6/2026 7:00:00 AM")!)
     let backend = FakeHealthStore()
     backend.cancelDuringQuery = true
     let writer = HealthWriter(backend: backend)

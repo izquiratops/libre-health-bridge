@@ -8,7 +8,7 @@ import XCTest
 final class SimulatorScenarioTests: XCTestCase {
     private func scenario(_ name: String) async -> AppModel {
         let launch = SimulatorScenarios.launch(arguments: ["--ui-scenario", name],
-            production: { fatalError("A synthetic launch must never create production adapters") })
+                                               production: { fatalError("A synthetic launch must never create production adapters") })
         await launch.restore()
         return launch.model
     }
@@ -69,7 +69,7 @@ final class SimulatorScenarioTests: XCTestCase {
     func testInvalidAndIncompleteFlagsFailClosedAcrossOperations() async {
         for args in [["--ui-scenario", "unknown"], ["--ui-scenario"]] {
             let launch = SimulatorScenarios.launch(arguments: args,
-                production: { fatalError("Invalid flags must fail closed") })
+                                                   production: { fatalError("Invalid flags must fail closed") })
             let model = launch.model
             XCTAssertNil(model.session)
             XCTAssertNotNil(model.errorMessage)

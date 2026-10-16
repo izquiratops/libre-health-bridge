@@ -63,11 +63,11 @@ final class HealthWriter: GlucoseWriter {
             HKQuantitySample(type: glucose, quantity: HKQuantity(unit: unit, doubleValue: write.reading.valueMgDl),
                              start: write.reading.timestamp, end: write.reading.timestamp,
                              metadata: [
-                                HKMetadataKeySyncIdentifier: write.reading.id,
-                                HKMetadataKeySyncVersion: write.version,
-                                HKMetadataKeyWasUserEntered: false,
-                                "org.librehealthbridge.source": "LibreLinkUp cloud import",
-                                "org.librehealthbridge.measurementKind": "Interstitial glucose"
+                                 HKMetadataKeySyncIdentifier: write.reading.id,
+                                 HKMetadataKeySyncVersion: write.version,
+                                 HKMetadataKeyWasUserEntered: false,
+                                 "org.librehealthbridge.source": "LibreLinkUp cloud import",
+                                 "org.librehealthbridge.measurementKind": "Interstitial glucose"
                              ])
         }
         // Once a save starts, it may finish despite cancellation. Return its completion time.
