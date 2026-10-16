@@ -69,7 +69,7 @@ extension AppModel {
         } catch { automaticMessage = "automatic.deferred" }
     }
 
-    func automaticAttemptFinished(_ result: OperationOutcome, failure: String? = nil) {
+    func automaticAttemptFinished(_ result: OperationOutcome, failure: AutomaticSyncFailure? = nil) {
         guard var saved = session, saved.automaticEnabled else { reconcileAutomatic(); return }
         let interval = TimeInterval(saved.automaticInterval * 60)
         if result == .success { automaticMessage = nil }
@@ -80,13 +80,9 @@ extension AppModel {
             max(now().addingTimeInterval(delay), backgroundRetryAfter ?? .distantPast)
         saved.automaticEarliest = max(now().addingTimeInterval(interval), saved.automaticBackoffUntil ?? .distantPast)
         backgroundRetryAfter = nil
-        let needsSetup = failure == "error.cloud.missingConnection"
-            || failure == "error.health.permission"
-            || failure == "error.local.validationRequired"
-            || healthAccess == .denied
+        let needsSetup = failure?.requiresSetup == true || healthAccess == .denied
         if needsSetup { saved.syncPaused = true }
-        if needsSetup || failure == "error.cloud.invalidCredentials"
-            || failure == "error.cloud.termsRequired" {
+        if needsSetup || failure?.requiresAttention == true {
             saved.automaticAttention = true
         }
         do {
@@ -165,12 +161,12 @@ extension AppModel {
             session?.verifiedPatientID == session?.selectedPatientID,
             session?.syncPaused == false, healthAccess == .authorized
         else {
-            let failure: String? = ownership == .owned && protectedDataAvailable()
+            let failure: AutomaticSyncFailure? = ownership == .owned && protectedDataAvailable()
                 && session?.automaticEnabled == true &&
                 (session?.verifiedPatientID != session?.selectedPatientID ||
                  session?.selectedPatientID == nil || session?.syncPaused != false ||
                  healthAccess != .authorized)
-                ? "error.local.validationRequired" : nil
+                ? .confirmationRequired : nil
             automaticAttemptFinished(.failure, failure: failure)
             return .failure
         }
