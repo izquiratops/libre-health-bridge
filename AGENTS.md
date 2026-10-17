@@ -13,11 +13,12 @@ Use these references for the existing **Libre Health Bridge Tasks** Notion datab
 
 [Open the task database](https://app.notion.com/p/628c4216911d492a93fccf7fb61c8f23).
 
-## Existing views
-
-- **Detailed view:** table over the task data source, currently without explicit sorting or grouping.
-- **Board — Status:** grouped by Status, subgrouped by Severity, sorted by Hash ascending. Empty Status columns remain visible.
-- **Board — Severity:** grouped by Severity, sorted by Hash ascending. Empty Severity columns are hidden.
-- Both boards show Task name, Hash, Severity, Branch, Status, Blocked by, and Review axis. Quick filters are Branch, Severity, and Review axis.
-
 Reuse these views. A new task does not require a new board, database, or standalone project page.
+
+# Agent instructions
+
+## Simulator screenshots
+
+- For PRs that add or change UI elements, include simulator screenshots of the affected screens in the PR description.
+- Use the synthetic fixtures in `LibreHealthBridge/SimulatorScenarios.swift` for shareable screenshots. Read their launch routing and build guards first; fixtures require a DEBUG simulator build.
+
