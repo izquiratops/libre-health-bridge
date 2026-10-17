@@ -1,8 +1,19 @@
 # Keep the existing style. Enforce whitespace without rewriting Swift constructs.
+
+# Toolchain
 --min-version 0.63.1
 --swift-version 6.0
+
+# Excluded paths
 --exclude BridgeCore/.build,BridgeCore/.swiftpm,ios
---rules consecutiveBlankLines,consecutiveSpaces,indent,linebreakAtEndOfFile,linebreaks,spaceAroundBraces,spaceAroundBrackets,spaceAroundOperators,spaceAroundParens,spaceInsideBraces,spaceInsideBrackets,spaceInsideParens,trailingSpace
+
+# Whitespace rules
+--rules consecutiveBlankLines,consecutiveSpaces,trailingSpace
+--rules indent,linebreakAtEndOfFile,linebreaks
+--rules spaceAroundBraces,spaceAroundBrackets,spaceAroundOperators,spaceAroundParens
+--rules spaceInsideBraces,spaceInsideBrackets,spaceInsideParens
+
+# Indentation and line endings
 --indent 4
 --ifdef no-indent
 --linebreaks lf
