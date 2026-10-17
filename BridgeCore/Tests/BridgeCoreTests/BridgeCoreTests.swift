@@ -20,16 +20,16 @@ private func raw(_ timestamp: String = "10/6/2026 6:30:00 AM", value: Double? = 
 }
 
 @Test(arguments: ["", "06/10/26", "2/29/2026 1:00:00 AM", "13/1/2026 1:00:00 AM",
-                   "2/30/2026 1:00:00 AM", "1/1/2026 0:00:00 AM", "1/1/2026 13:00:00 PM", "1/1/2026 1:60:00 AM"])
+                  "2/30/2026 1:00:00 AM", "1/1/2026 0:00:00 AM", "1/1/2026 13:00:00 PM", "1/1/2026 1:60:00 AM"])
 func rejectsInvalidTimestamps(_ value: String) { #expect(TimestampParser.parse(value) == nil) }
 
 @Test func acceptsLeapDay() { #expect(TimestampParser.parse("2/29/2028 1:00:00 AM") != nil) }
 
 @Test func normalizationExcludesUnsafeReadingsAndDeduplicates() {
     let batch = ReadingNormalizer.normalize(history: [raw(), raw(), raw("10/6/2026 6:00:00 AM", high: true),
-        raw("10/6/2026 6:01:00 AM", low: true), raw("10/6/2026 6:02:00 AM", high: nil),
-        raw("10/6/2026 6:03:00 AM", value: nil), raw("10/6/2026 8:00:00 AM"), raw("bad")],
-        latest: raw(value: 109), patientID: "patient-a", now: now)
+                                                      raw("10/6/2026 6:01:00 AM", low: true), raw("10/6/2026 6:02:00 AM", high: nil),
+                                                      raw("10/6/2026 6:03:00 AM", value: nil), raw("10/6/2026 8:00:00 AM"), raw("bad")],
+                                            latest: raw(value: 109), patientID: "patient-a", now: now)
     #expect(batch.readings.count == 1)
     #expect(batch.readings.first?.valueMgDl == 109)
     #expect(batch.overlapCount == 2)
@@ -207,7 +207,7 @@ private struct CancelledTransport: CloudTransport {
 
 @Test func wrongPatientGraphIsRejected() async throws {
     let mock = MockTransport([loginReply, connectionsReply,
-        reply(#"{"status":0,"data":{"connection":{"patientId":"patient-b"},"graphData":[]}}"#)])
+                              reply(#"{"status":0,"data":{"connection":{"patientId":"patient-b"},"graphData":[]}}"#)])
     let api = client(mock)
     let connection = try #require(try await api.connections().first)
     await #expect(throws: CloudError.wrongPatient) { try await api.snapshot(for: connection, now: now) }
@@ -215,7 +215,7 @@ private struct CancelledTransport: CloudTransport {
 
 @Test func snapshotPrefersFresherLatestEndpoint() async throws {
     let mock = MockTransport([loginReply, connectionsReply,
-        reply(#"{"status":0,"data":{"connection":{"patientId":"patient-a","glucoseMeasurement":{"FactoryTimestamp":"10/6/2026 6:20:00 AM","ValueInMgPerDl":107,"isHigh":false,"isLow":false}},"graphData":[]}}"#)])
+                              reply(#"{"status":0,"data":{"connection":{"patientId":"patient-a","glucoseMeasurement":{"FactoryTimestamp":"10/6/2026 6:20:00 AM","ValueInMgPerDl":107,"isHigh":false,"isLow":false}},"graphData":[]}}"#)])
     let api = client(mock)
     let connection = try #require(try await api.connections().first)
     let snapshot = try await api.snapshot(for: connection, now: now)
@@ -226,7 +226,7 @@ private struct CancelledTransport: CloudTransport {
 
 @Test func equalTimestampCorrectionFromGraphWins() async throws {
     let mock = MockTransport([loginReply, connectionsReply,
-        reply(#"{"status":0,"data":{"connection":{"patientId":"patient-a","glucoseMeasurement":{"FactoryTimestamp":"10/6/2026 6:30:00 AM","ValueInMgPerDl":109,"isHigh":false,"isLow":false}},"graphData":[]}}"#)])
+                              reply(#"{"status":0,"data":{"connection":{"patientId":"patient-a","glucoseMeasurement":{"FactoryTimestamp":"10/6/2026 6:30:00 AM","ValueInMgPerDl":109,"isHigh":false,"isLow":false}},"graphData":[]}}"#)])
     let api = client(mock)
     let connection = try #require(try await api.connections().first)
     let snapshot = try await api.snapshot(for: connection, now: now)

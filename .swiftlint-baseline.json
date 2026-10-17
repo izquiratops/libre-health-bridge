@@ -1,0 +1,857 @@
+[
+  {
+    "text": "        struct User: Decodable { let id: String }",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 81
+      },
+      "reason": "Types should be nested at most 1 level deep",
+      "ruleDescription": "Types should be nested at most 1 level deep, and functions should be nested at most 2 levels deep.",
+      "ruleIdentifier": "nesting",
+      "ruleName": "Nesting",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        struct Ticket: Decodable { let token: String }",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 82
+      },
+      "reason": "Types should be nested at most 1 level deep",
+      "ruleDescription": "Types should be nested at most 1 level deep, and functions should be nested at most 2 levels deep.",
+      "ruleIdentifier": "nesting",
+      "ruleName": "Nesting",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    private func request<T: Decodable>(_ path: [String], body: Data? = nil,",
+    "violation": {
+      "location": {
+        "character": 13,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 89
+      },
+      "reason": "Function should have complexity 10 or less; currently complexity is 15",
+      "ruleDescription": "Complexity of function bodies should be limited.",
+      "ruleIdentifier": "cyclomatic_complexity",
+      "ruleName": "Cyclomatic Complexity",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        do { response = try await transport.send(request) }",
+    "violation": {
+      "location": {
+        "character": 59,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 106
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        catch is CancellationError { throw CancellationError() }",
+    "violation": {
+      "location": {
+        "character": 64,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 107
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        catch let error as URLError where error.code == .cancelled { throw CancellationError() }",
+    "violation": {
+      "location": {
+        "character": 96,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 108
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        do { status = try JSONDecoder().decode(Status.self, from: response.data).status }",
+    "violation": {
+      "location": {
+        "character": 89,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 115
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        do { return try await request(path, authenticated: true, as: type) }",
+    "violation": {
+      "location": {
+        "character": 76,
+        "file": "BridgeCore/Sources/BridgeCore/CloudClient.swift",
+        "line": 158
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        let c = try? decoder.container(keyedBy: CodingKeys.self)",
+    "violation": {
+      "location": {
+        "character": 13,
+        "file": "BridgeCore/Sources/BridgeCore/Models.swift",
+        "line": 40
+      },
+      "reason": "Variable name 'c' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    private static let regex = try! NSRegularExpression(pattern: #\"^(\\d{1,2})/(\\d{1,2})/(\\d{4}) (\\d{1,2}):(\\d{2}):(\\d{2}) (AM|PM)$\"#)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Sources/BridgeCore/ReadingNormalizer.swift",
+        "line": 4
+      },
+      "reason": "Line should be 120 characters or less; currently it has 133 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    private static let regex = try! NSRegularExpression(pattern: #\"^(\\d{1,2})/(\\d{1,2})/(\\d{4}) (\\d{1,2}):(\\d{2}):(\\d{2}) (AM|PM)$\"#)",
+    "violation": {
+      "location": {
+        "character": 32,
+        "file": "BridgeCore/Sources/BridgeCore/ReadingNormalizer.swift",
+        "line": 4
+      },
+      "reason": "Force tries should be avoided",
+      "ruleDescription": "Force tries should be avoided",
+      "ruleIdentifier": "force_try",
+      "ruleName": "Force Try",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "        let ns = input as NSString",
+    "violation": {
+      "location": {
+        "character": 13,
+        "file": "BridgeCore/Sources/BridgeCore/ReadingNormalizer.swift",
+        "line": 11
+      },
+      "reason": "Variable name 'ns' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        let components = DateComponents(year: year, month: month, day: day, hour: hour24, minute: minute, second: second)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Sources/BridgeCore/ReadingNormalizer.swift",
+        "line": 21
+      },
+      "reason": "Line should be 120 characters or less; currently it has 121 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "                                                      raw(\"10/6/2026 6:01:00 AM\", low: true), raw(\"10/6/2026 6:02:00 AM\", high: nil),",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 30
+      },
+      "reason": "Line should be 120 characters or less; currently it has 133 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "                                                      raw(\"10/6/2026 6:03:00 AM\", value: nil), raw(\"10/6/2026 8:00:00 AM\"), raw(\"bad\")],",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 31
+      },
+      "reason": "Line should be 120 characters or less; currently it has 136 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    let bytes = Data(#\"[{\"FactoryTimestamp\":\"10/6/2026 6:30:00 AM\",\"ValueInMgPerDl\":108,\"isHigh\":false,\"isLow\":false},{\"ValueInMgPerDl\":\"108\"},null]\"#.utf8)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 62
+      },
+      "reason": "Line should be 120 characters or less; currently it has 156 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    let bytes = Data(#\"{\"FactoryTimestamp\":\"10/6/2026 6:30:00 AM\",\"ValueInMgPerDl\":108,\"Value\":6,\"GlucoseUnits\":1,\"isHigh\":false,\"isLow\":false}\"#.utf8)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 70
+      },
+      "reason": "Line should be 120 characters or less; currently it has 151 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    let a = GlucoseReading(patientID: \"a\", timestamp: past, valueMgDl: 108)",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 78
+      },
+      "reason": "Variable name 'a' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    let b = GlucoseReading(patientID: \"b\", timestamp: past, valueMgDl: 108)",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 80
+      },
+      "reason": "Variable name 'b' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    let a = GlucoseReading(patientID: \"a\", timestamp: past, valueMgDl: 108)",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 87
+      },
+      "reason": "Variable name 'a' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    let b = GlucoseReading(patientID: \"a\", timestamp: past.addingTimeInterval(60), valueMgDl: 110)",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 88
+      },
+      "reason": "Variable name 'b' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    let c = GlucoseReading(patientID: \"a\", timestamp: past.addingTimeInterval(120), valueMgDl: 111)",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 89
+      },
+      "reason": "Variable name 'c' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    let a = GlucoseReading(patientID: \"a\", timestamp: past, valueMgDl: 108)",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 106
+      },
+      "reason": "Variable name 'a' should be between 3 and 40 characters long",
+      "ruleDescription": "Identifier names should only contain alphanumeric characters and start with a lowercase character or should only contain capital letters. In an exception to the above, variable names may start with a capital letter when they are declared as static. Variable names should not be too long or too short.",
+      "ruleIdentifier": "identifier_name",
+      "ruleName": "Identifier Name",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "private let loginReply = reply(#\"{\"status\":0,\"data\":{\"user\":{\"id\":\"synthetic-account\"},\"authTicket\":{\"token\":\"synthetic-token\"}}}\"#)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 130
+      },
+      "reason": "Line should be 120 characters or less; currently it has 132 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "private let connectionsReply = reply(#\"{\"status\":0,\"data\":[{\"patientId\":\"patient-a\",\"firstName\":\"Test\",\"glucoseMeasurement\":{\"FactoryTimestamp\":\"10/6/2026 6:30:00 AM\",\"ValueInMgPerDl\":108,\"isHigh\":false,\"isLow\":false}}]}\"#)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 131
+      },
+      "reason": "Line should be 200 characters or less; currently it has 223 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "    LibreCloudClient(credentials: Credentials(email: \"test@example.com\", password: \"test-password\"), transport: transport)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 133
+      },
+      "reason": "Line should be 120 characters or less; currently it has 122 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    do { try await client(mock).login(); Issue.record(\"Login unexpectedly succeeded\") }",
+    "violation": {
+      "location": {
+        "character": 87,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 201
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "                              reply(#\"{\"status\":0,\"data\":{\"connection\":{\"patientId\":\"patient-a\",\"glucoseMeasurement\":{\"FactoryTimestamp\":\"10/6/2026 6:20:00 AM\",\"ValueInMgPerDl\":107,\"isHigh\":false,\"isLow\":false}},\"graphData\":[]}}\"#)])",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 218
+      },
+      "reason": "Line should be 200 characters or less; currently it has 233 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "                              reply(#\"{\"status\":0,\"data\":{\"connection\":{\"patientId\":\"patient-a\",\"glucoseMeasurement\":{\"FactoryTimestamp\":\"10/6/2026 6:30:00 AM\",\"ValueInMgPerDl\":109,\"isHigh\":false,\"isLow\":false}},\"graphData\":[]}}\"#)])",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "BridgeCore/Tests/BridgeCoreTests/BridgeCoreTests.swift",
+        "line": 229
+      },
+      "reason": "Line should be 200 characters or less; currently it has 233 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "        } catch is CancellationError { throw CancellationError() }",
+    "violation": {
+      "location": {
+        "character": 66,
+        "file": "LibreHealthBridge/HealthWriter.swift",
+        "line": 144
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        do { try await store.save(samples) }",
+    "violation": {
+      "location": {
+        "character": 44,
+        "file": "LibreHealthBridge/HealthWriter.swift",
+        "line": 150
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        catch is CancellationError { throw CancellationError() }",
+    "violation": {
+      "location": {
+        "character": 64,
+        "file": "LibreHealthBridge/HealthWriter.swift",
+        "line": 151
+      },
+      "reason": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleDescription": "Else and catch should be on the same line, one space after the previous declaration",
+      "ruleIdentifier": "statement_position",
+      "ruleName": "Statement Position",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "                        return StoredReading(id: id, valueMgDl: sample.quantity.doubleValue(for: unit), version: version)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridge/HealthWriter.swift",
+        "line": 177
+      },
+      "reason": "Line should be 120 characters or less; currently it has 121 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    {",
+    "violation": {
+      "location": {
+        "character": 5,
+        "file": "LibreHealthBridge/Models/AppModel+Session.swift",
+        "line": 127
+      },
+      "reason": "Opening braces should be preceded by a single space and on the same line as the declaration",
+      "ruleDescription": "The correct positioning of braces that introduce a block of code or member list is highly controversial. No matter which style is preferred, consistency is key. Apart from different tastes, the positioning of braces can also have a significant impact on the readability of the code, especially for visually impaired developers. This rule ensures that braces are preceded by a single space and on the same line as the declaration. Comments between the declaration and the opening brace are respected. Check out the `contrasted_opening_brace` rule for a different style.",
+      "ruleIdentifier": "opening_brace",
+      "ruleName": "Opening Brace Spacing",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    static func launch(",
+    "violation": {
+      "location": {
+        "character": 5,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 50
+      },
+      "reason": "Function should have complexity 10 or less; currently complexity is 18",
+      "ruleDescription": "Complexity of function bodies should be limited.",
+      "ruleIdentifier": "cyclomatic_complexity",
+      "ruleName": "Cyclomatic Complexity",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "    static func launch(",
+    "violation": {
+      "location": {
+        "character": 12,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 50
+      },
+      "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 52 lines",
+      "ruleDescription": "Function bodies should not span too many lines",
+      "ruleIdentifier": "function_body_length",
+      "ruleName": "Function Body Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            #\", \"glucoseMeasurement\":{\"FactoryTimestamp\":\"02/18/2026 11:55:00 AM\",\"Timestamp\":\"02/18/2026 11:55:00 AM\",\"ValueInMgPerDl\":112,\"isHigh\":false,\"isLow\":false}\"#",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 156
+      },
+      "reason": "Line should be 120 characters or less; currently it has 171 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        return try! JSONDecoder().decode(Connection.self, from: Data(",
+    "violation": {
+      "location": {
+        "character": 16,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 157
+      },
+      "reason": "Force tries should be avoided",
+      "ruleDescription": "Force tries should be avoided",
+      "ruleIdentifier": "force_try",
+      "ruleName": "Force Try",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "        try! JSONDecoder().decode(Connection.self, from: Data(",
+    "violation": {
+      "location": {
+        "character": 9,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 162
+      },
+      "reason": "Force tries should be avoided",
+      "ruleDescription": "Force tries should be avoided",
+      "ruleIdentifier": "force_try",
+      "ruleName": "Force Try",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "            #\"{\"patientId\":\"fixture-patient-02\",\"firstName\":\"Blair\",\"lastName\":\"Rivera\",\"glucoseMeasurement\":{\"FactoryTimestamp\":\"02/18/2026 11:50:00 AM\",\"ValueInMgPerDl\":105,\"isHigh\":false,\"isLow\":false}}\"#.utf8))",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 163
+      },
+      "reason": "Line should be 200 characters or less; currently it has 214 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "                #\"{\"patientId\":\"fixture-patient-01\",\"firstName\":\"Alex\",\"lastName\":\"Rivera\",\"glucoseMeasurement\":{\"FactoryTimestamp\":\"02/18/2026 11:55:00 AM\",\"Timestamp\":\"02/18/2026 11:55:00 AM\",\"ValueInMgPerDl\":112,\"isHigh\":false,\"isLow\":false}}\"#",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 185
+      },
+      "reason": "Line should be 200 characters or less; currently it has 247 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "                entry + (scenario == .multipleProfiles ? \",\" + #\"{\"patientId\":\"fixture-patient-02\",\"firstName\":\"Blair\",\"lastName\":\"Rivera\",\"glucoseMeasurement\":{\"FactoryTimestamp\":\"02/18/2026 11:50:00 AM\",\"ValueInMgPerDl\":105,\"isHigh\":false,\"isLow\":false}}\"# : \"\")",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridge/SimulatorScenarios.swift",
+        "line": 187
+      },
+      "reason": "Line should be 200 characters or less; currently it has 264 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "            {",
+    "violation": {
+      "location": {
+        "character": 13,
+        "file": "LibreHealthBridge/Views/HealthSetupView.swift",
+        "line": 80
+      },
+      "reason": "Opening braces should be preceded by a single space and on the same line as the declaration",
+      "ruleDescription": "The correct positioning of braces that introduce a block of code or member list is highly controversial. No matter which style is preferred, consistency is key. Apart from different tastes, the positioning of braces can also have a significant impact on the readability of the code, especially for visually impaired developers. This rule ensures that braces are preceded by a single space and on the same line as the declaration. Comments between the declaration and the opening brace are respected. Check out the `contrasted_opening_brace` rule for a different style.",
+      "ruleIdentifier": "opening_brace",
+      "ruleName": "Opening Brace Spacing",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            {",
+    "violation": {
+      "location": {
+        "character": 13,
+        "file": "LibreHealthBridge/Views/HealthSetupView.swift",
+        "line": 124
+      },
+      "reason": "Opening braces should be preceded by a single space and on the same line as the declaration",
+      "ruleDescription": "The correct positioning of braces that introduce a block of code or member list is highly controversial. No matter which style is preferred, consistency is key. Apart from different tastes, the positioning of braces can also have a significant impact on the readability of the code, especially for visually impaired developers. This rule ensures that braces are preceded by a single space and on the same line as the declaration. Comments between the declaration and the opening brace are respected. Check out the `contrasted_opening_brace` rule for a different style.",
+      "ruleIdentifier": "opening_brace",
+      "ruleName": "Opening Brace Spacing",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "                                    .clear,",
+    "violation": {
+      "location": {
+        "character": 43,
+        "file": "LibreHealthBridge/Views/HomeView.swift",
+        "line": 115
+      },
+      "reason": "Collection literals should not have trailing commas",
+      "ruleDescription": "Trailing commas in arrays and dictionaries should be avoided/enforced.",
+      "ruleIdentifier": "trailing_comma",
+      "ruleName": "Trailing Comma",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "}",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeTests/AppModelTests.swift",
+        "line": 643
+      },
+      "reason": "File should contain 400 lines or less: currently contains 643",
+      "ruleDescription": "Files should not span too many lines.",
+      "ruleIdentifier": "file_length",
+      "ruleName": "File Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "                                               production: { fatalError(\"A synthetic launch must never create production adapters\") })",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeTests/SimulatorScenarioTests.swift",
+        "line": 11
+      },
+      "reason": "Line should be 120 characters or less; currently it has 134 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        let connection = try! JSONDecoder().decode(Connection.self, from: Data(",
+    "violation": {
+      "location": {
+        "character": 26,
+        "file": "LibreHealthBridgeTests/SimulatorScenarioTests.swift",
+        "line": 128
+      },
+      "reason": "Force tries should be avoided",
+      "ruleDescription": "Force tries should be avoided",
+      "ruleIdentifier": "force_try",
+      "ruleName": "Force Try",
+      "severity": "error"
+    }
+  },
+  {
+    "text": "        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", \"convenient way\")).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 35
+      },
+      "reason": "Line should be 120 characters or less; currently it has 127 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", \"Privacy and limitations\")).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 36
+      },
+      "reason": "Line should be 120 characters or less; currently it has 136 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", \"Health import did not finish\")).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 120
+      },
+      "reason": "Line should be 120 characters or less; currently it has 141 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", \"cloud request failed\")).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 139
+      },
+      "reason": "Line should be 120 characters or less; currently it has 133 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", message)).firstMatch.exists, scenario)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 159
+      },
+      "reason": "Line should be 120 characters or less; currently it has 132 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", \"fixture-patient-01\")).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 160
+      },
+      "reason": "Line should be 120 characters or less; currently it has 136 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", message)).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 175
+      },
+      "reason": "Line should be 120 characters or less; currently it has 122 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", message)).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 190
+      },
+      "reason": "Line should be 120 characters or less; currently it has 122 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  },
+  {
+    "text": "            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: \"label CONTAINS %@\", message)).firstMatch.exists)",
+    "violation": {
+      "location": {
+        "character": 1,
+        "file": "LibreHealthBridgeUITests/LibreHealthBridgeUITests.swift",
+        "line": 206
+      },
+      "reason": "Line should be 120 characters or less; currently it has 122 characters",
+      "ruleDescription": "Lines should not span too many characters.",
+      "ruleIdentifier": "line_length",
+      "ruleName": "Line Length",
+      "severity": "warning"
+    }
+  }
+]

@@ -1,0 +1,10 @@
+included:
+  - BridgeCore/Package.swift
+  - BridgeCore/Sources
+  - BridgeCore/Tests
+  - LibreHealthBridge
+  - LibreHealthBridgeTests
+  - LibreHealthBridgeUITests
+
+# Existing violations remain visible in the baseline. New violations fail CI.
+baseline: .swiftlint-baseline.json

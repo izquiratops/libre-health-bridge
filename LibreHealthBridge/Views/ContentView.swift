@@ -16,15 +16,15 @@ struct ContentView: View {
 
     private var appNavigation: some View {
         #if DEBUG && targetEnvironment(simulator)
-            presentedTabs.modifier(
-                SimulatorLaunchRouting(
-                    selectedTab: $selectedTab,
-                    showLogin: $showLogin,
-                    showSetup: $showSetup
-                )
+        presentedTabs.modifier(
+            SimulatorLaunchRouting(
+                selectedTab: $selectedTab,
+                showLogin: $showLogin,
+                showSetup: $showSetup
             )
+        )
         #else
-            presentedTabs
+        presentedTabs
         #endif
     }
 
