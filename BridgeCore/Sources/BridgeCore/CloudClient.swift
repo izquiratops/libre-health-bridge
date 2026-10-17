@@ -151,7 +151,7 @@ public actor LibreCloudClient {
         token = nil
         accountID = nil
         var visited: Set<String> = []
-        for _ in 0..<4 {
+        for _ in 0 ..< 4 {
             guard visited.insert(host).inserted else { throw CloudError.regionalRedirect }
             let data = try await request(["llu", "auth", "login"],
                                          body: JSONEncoder().encode(credentials), as: Login.self)
@@ -185,8 +185,8 @@ public actor LibreCloudClient {
         let result = try await get(["llu", "connections"], as: [Connection].self)
         // IDs come from this endpoint and later become a single URL path component.
         guard result.allSatisfy({ !$0.patientId.isEmpty && $0.patientId.count <= 128 &&
-            $0.patientId.range(of: #"^[A-Za-z0-9-]+$"#, options: .regularExpression) != nil }),
-              Set(result.map(\.patientId)).count == result.count
+                $0.patientId.range(of: #"^[A-Za-z0-9-]+$"#, options: .regularExpression) != nil }),
+            Set(result.map(\.patientId)).count == result.count
         else { throw CloudError.invalidResponse }
         return result
     }

@@ -6,7 +6,7 @@ extension AppModel {
     func confirmPreview() async -> Bool {
         return await perform {
             guard canConfirmPreview, var saved = session,
-                let id = saved.selectedPatientID
+                  let id = saved.selectedPatientID
             else { throw LocalError.noReadings }
             saved.verifiedPatientID = id
             try sessionStore.save(saved)
@@ -91,7 +91,7 @@ extension AppModel {
                     isHealthSyncActive else { throw CancellationError() }
             }
             guard let snapshot, var saved = session,
-                saved.selectedPatientID == snapshot.patientID
+                  saved.selectedPatientID == snapshot.patientID
             else { throw CloudError.missingConnection }
             guard saved.verifiedPatientID == snapshot.patientID else {
                 throw LocalError.validationRequired

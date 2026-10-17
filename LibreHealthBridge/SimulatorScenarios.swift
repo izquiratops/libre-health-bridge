@@ -164,7 +164,7 @@ private final class ScenarioHealthStore: GlucoseHealthStore {
         samples.compactMap { sample in
             guard let id = sample.metadata?[HKMetadataKeySyncIdentifier] as? String else { return nil }
             return StoredReading(id: id, valueMgDl: sample.quantity.doubleValue(for: HKUnit(from: "mg/dL")),
-                version: sample.metadata?[HKMetadataKeySyncVersion] as? Int ?? 0)
+                                 version: sample.metadata?[HKMetadataKeySyncVersion] as? Int ?? 0)
         }
     }
     func save(_ values: [HKQuantitySample]) async throws {

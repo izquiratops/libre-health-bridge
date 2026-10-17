@@ -9,11 +9,11 @@ public enum TimestampParser {
               let match = regex.firstMatch(in: input, range: NSRange(input.startIndex..., in: input))
         else { return nil }
         let ns = input as NSString
-        let parts = (1...6).compactMap { Int(ns.substring(with: match.range(at: $0))) }
+        let parts = (1 ... 6).compactMap { Int(ns.substring(with: match.range(at: $0))) }
         guard parts.count == 6 else { return nil }
         let (month, day, year, hour, minute, second) = (parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
-        guard (2000...9999).contains(year), (1...12).contains(month), (1...31).contains(day),
-              (1...12).contains(hour), (0...59).contains(minute), (0...59).contains(second)
+        guard (2000 ... 9999).contains(year), (1 ... 12).contains(month), (1 ... 31).contains(day),
+              (1 ... 12).contains(hour), (0 ... 59).contains(minute), (0 ... 59).contains(second)
         else { return nil }
         let hour24 = hour % 12 + (ns.substring(with: match.range(at: 7)) == "PM" ? 12 : 0)
         var calendar = Calendar(identifier: .gregorian)
@@ -45,7 +45,7 @@ public enum ReadingNormalizer {
         if high { return Validation(timestamp: date, exclusion: .flaggedHigh) }
         if low { return Validation(timestamp: date, exclusion: .flaggedLow) }
         // A supported numeric range is separate from the high/low sensor flags.
-        guard let value = raw.valueMgDl, value.isFinite, (1...1000).contains(value) else {
+        guard let value = raw.valueMgDl, value.isFinite, (1 ... 1000).contains(value) else {
             return Validation(timestamp: date, exclusion: .invalidValue)
         }
         return Validation(timestamp: date, exclusion: nil)

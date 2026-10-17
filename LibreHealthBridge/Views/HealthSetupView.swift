@@ -76,7 +76,7 @@ struct HealthSetupView: View {
                 complete: model.isVerified && model.canConfirmPreview
             )
             if model.canConfirmPreview, let preview = model.snapshot?.preview,
-                let value = preview.valueMgDl, let time = preview.timestamp
+               let value = preview.valueMgDl, let time = preview.timestamp
             {
                 LabeledContent("reading.latest", value: glucoseLabel(value))
                 LabeledContent("reading.measured", value: dateLabel(time))
@@ -97,7 +97,7 @@ struct HealthSetupView: View {
                 .disabled(!model.canConfirmPreview && !model.isVerified)
                 .accessibilityIdentifier("health.setup.confirm")
                 Button("reading.refresh") { Task { await model.refresh() } }
-                .accessibilityIdentifier("health.setup.refresh")
+                    .accessibilityIdentifier("health.setup.refresh")
             }
         } header: {
             Text("reading.title")
@@ -187,7 +187,7 @@ struct HealthSetupView: View {
                 Text(model.connections.isEmpty
                     ? "profile.none"
                     : model.selectedPatientID == nil
-                        ? "profile.selectPrompt" : "health.sync.profileMissing")
+                    ? "profile.selectPrompt" : "health.sync.profileMissing")
                     .foregroundStyle(.secondary)
             }
             Button("profile.refresh") { Task { await model.refresh() } }
