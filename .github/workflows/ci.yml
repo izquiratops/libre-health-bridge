@@ -23,7 +23,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Install tools with Homebrew
@@ -40,7 +40,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Run package tests
@@ -51,14 +51,14 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Run simulator tests
         run: make test-ios IOS_DESTINATION='platform=iOS Simulator,name=iPhone 17,OS=27.0'
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ios-test-results
           path: ios/.derivedData/*.xcresult
