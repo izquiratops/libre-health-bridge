@@ -15,22 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+  DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
 
 jobs:
   quality:
     name: Format and lint
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Install pinned tools
+      - name: Install tools with Homebrew
         id: tools
         run: make tools
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Check formatting
         run: make format-check
       - name: Lint
@@ -39,7 +37,7 @@ jobs:
 
   core-tests:
     name: BridgeCore tests
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -50,14 +48,14 @@ jobs:
 
   ios-tests:
     name: iOS unit and UI tests
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Run simulator tests
-        run: make test-ios IOS_DESTINATION='platform=iOS Simulator,name=iPhone 17,OS=26.2'
+        run: make test-ios IOS_DESTINATION='platform=iOS Simulator,name=iPhone 17,OS=27.0'
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

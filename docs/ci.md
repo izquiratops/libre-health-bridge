@@ -12,15 +12,15 @@
   are required. The job uploads the `.xcresult` bundle, including on test failure,
   and retains it for seven days.
 
-CI uses the `macos-15` runner, Xcode 26.3, and an iPhone 17 simulator with iOS 26.2.
+CI uses the ARM64 `xcode-27` runner, Xcode 27.0, and an iPhone 17 simulator with iOS 27.0.
 Keep these versions compatible with the
-[GitHub runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md)
+[GitHub runner image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)
 when you update the workflow. Builds and tests also check Swift types.
 
 ## Run the same checks locally
 
-Use macOS with full Xcode, an installed iOS simulator runtime, and an authenticated
-[GitHub CLI](https://cli.github.com/). Run these commands from the repository root:
+Use macOS with full Xcode, an installed iOS simulator runtime, and
+[Homebrew](https://brew.sh/) on your `PATH`. Run these commands from the repository root:
 
 ```sh
 make tools
@@ -29,11 +29,10 @@ make lint
 make test
 ```
 
-`make tools` installs SwiftFormat 0.63.1 and SwiftLint 0.65.1 in the ignored
-`.build/quality-tools` directory. The installer verifies the archive checksums.
-Tool releases and checksums are in
-[`scripts/install-quality-tools.sh`](../scripts/install-quality-tools.sh).
-Run `make tools` again after these pins change.
+`make tools` runs `brew install swiftformat swiftlint`. The checks use the
+Homebrew executables on your `PATH`; no custom installer or GitHub token is needed.
+Tool versions follow Homebrew rather than fixed release pins. Use
+`swiftformat --version` and `swiftlint version` to inspect your installed versions.
 
 Use `make format` to apply whitespace fixes. Formatting rules are in
 [`.swiftformat`](../.swiftformat). They preserve the existing Swift constructs
@@ -60,10 +59,10 @@ package, app, and tests. The initial 57 violations are recorded in
 separate from code refactoring. New violations fail `make lint`, including
 warnings. Do not add new violations to the baseline to make CI pass.
 
-When you fix existing violations, update the baseline with the pinned tool:
+When you fix existing violations, update the baseline with SwiftLint:
 
 ```sh
-.build/quality-tools/swiftlint lint --no-cache --write-baseline .swiftlint-baseline.json
+swiftlint lint --no-cache --write-baseline .swiftlint-baseline.json
 make lint
 ```
 

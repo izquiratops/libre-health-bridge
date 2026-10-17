@@ -3,18 +3,18 @@
 IOS_DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=latest
 RESULT_BUNDLE ?= ios/.derivedData/TestResults-$(shell date -u +%Y%m%dT%H%M%SZ).xcresult
 
-# Run once before format, format-check, or lint. Requires the GitHub CLI.
+# Run once before format, format-check, or lint. Requires Homebrew.
 tools:
-	bash scripts/install-quality-tools.sh
+	brew install swiftformat swiftlint
 
 format:
-	.build/quality-tools/swiftformat .
+	swiftformat .
 
 format-check:
-	.build/quality-tools/swiftformat . --lint
+	swiftformat . --lint
 
 lint:
-	.build/quality-tools/swiftlint lint --strict --no-cache
+	swiftlint lint --strict --no-cache
 
 test: test-core test-ios
 
