@@ -235,6 +235,13 @@ final class LibreHealthBridgeUITests: XCTestCase {
         XCTAssertTrue(unavailable.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Last update"].exists)
         screenshot(app, named: "offline-profile-home")
+        app.buttons["automatic.open"].tap()
+        let deferred = app.staticTexts["Temporarily unavailable; a later attempt may be requested."]
+        for _ in 0 ..< 5 where !deferred.exists { app.swipeUp() }
+        XCTAssertTrue(deferred.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Profile details unavailable. Refresh profiles when connected."].exists)
+        screenshot(app, named: "offline-profile-automatic")
+        app.navigationBars.buttons.firstMatch.tap()
         app.buttons["health.sync"].tap()
         XCTAssertTrue(app.buttons["profile.refresh"].waitForExistence(timeout: 5))
         XCTAssertTrue(unavailable.exists)
