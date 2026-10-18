@@ -30,7 +30,7 @@ final class LibreHealthBridgeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["automatic.buy"].exists)
         app.buttons["automatic.buy"].tap() // Synthetic cancellation; no real purchase.
         XCTAssertFalse(app.switches["automatic.enable"].exists)
-        for _ in 0..<5 where !app.buttons["automatic.restore"].exists { app.swipeUp() }
+        for _ in 0 ..< 5 where !app.buttons["automatic.restore"].exists { app.swipeUp() }
         XCTAssertTrue(app.buttons["automatic.restore"].waitForExistence(timeout: 5))
         app.buttons["automatic.restore"].tap()
         XCTAssertFalse(app.switches["automatic.enable"].exists)
@@ -40,14 +40,14 @@ final class LibreHealthBridgeUITests: XCTestCase {
     func testPremiumSettingRequiresSetupAndStopsWithHealthSync() {
         let blocked = launch(scenario: "premium-setup")
         blocked.buttons["automatic.open"].tap()
-        for _ in 0..<5 where !blocked.switches["automatic.enable"].exists { blocked.swipeUp() }
+        for _ in 0 ..< 5 where !blocked.switches["automatic.enable"].exists { blocked.swipeUp() }
         XCTAssertTrue(blocked.switches["automatic.enable"].waitForExistence(timeout: 5))
         XCTAssertFalse(blocked.switches["automatic.enable"].isEnabled)
         blocked.terminate()
 
         let app = launch(scenario: "premium-ready")
         app.buttons["automatic.open"].tap()
-        for _ in 0..<5 where !app.switches["automatic.enable"].exists { app.swipeUp() }
+        for _ in 0 ..< 5 where !app.switches["automatic.enable"].exists { app.swipeUp() }
         let toggle = app.switches["automatic.enable"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         XCTAssertTrue(toggle.isEnabled)
@@ -59,7 +59,7 @@ final class LibreHealthBridgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Last update"].waitForExistence(timeout: 5))
         app.buttons["health.stop"].tap()
         app.buttons["automatic.open"].tap()
-        for _ in 0..<5 where !app.staticTexts["Off"].exists { app.swipeUp() }
+        for _ in 0 ..< 5 where !app.staticTexts["Off"].exists { app.swipeUp() }
         XCTAssertTrue(app.staticTexts["Off"].waitForExistence(timeout: 5))
     }
 
@@ -67,7 +67,7 @@ final class LibreHealthBridgeUITests: XCTestCase {
     func testAutomaticStatusExplainsSystemBlockerAndNeedsAttention() {
         let blocked = launch(scenario: "premium-refresh-off")
         blocked.buttons["automatic.open"].tap()
-        for _ in 0..<6 where !blocked.staticTexts.containing(NSPredicate(
+        for _ in 0 ..< 6 where !blocked.staticTexts.containing(NSPredicate(
             format: "label CONTAINS %@", "Background App Refresh is disabled")).firstMatch.exists {
             blocked.swipeUp()
         }
@@ -77,7 +77,7 @@ final class LibreHealthBridgeUITests: XCTestCase {
 
         let attention = launch(scenario: "premium-attention")
         attention.buttons["automatic.open"].tap()
-        for _ in 0..<6 where !attention.staticTexts.containing(NSPredicate(
+        for _ in 0 ..< 6 where !attention.staticTexts.containing(NSPredicate(
             format: "label CONTAINS %@", "Needs attention")).firstMatch.exists {
             attention.swipeUp()
         }
@@ -224,6 +224,32 @@ final class LibreHealthBridgeUITests: XCTestCase {
             screenshot(app, named: "failure-\(scenario)")
             app.terminate()
         }
+    }
+
+    @MainActor
+    func testOfflineColdLaunchHomeActionAndRecovery() {
+        let app = launch(scenario: "offline-cold-launch")
+        XCTAssertTrue(app.alerts["Action needed"].waitForExistence(timeout: 10))
+        app.buttons["Dismiss"].tap()
+        let unavailable = app.staticTexts["Profile details unavailable. Refresh profiles when connected."]
+        XCTAssertTrue(unavailable.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Last update"].exists)
+        screenshot(app, named: "offline-profile-home")
+        app.buttons["health.sync"].tap()
+        XCTAssertTrue(app.buttons["profile.refresh"].waitForExistence(timeout: 5))
+        XCTAssertTrue(unavailable.exists)
+        XCTAssertFalse(app.buttons["health.setup.sync"].isEnabled)
+        XCTAssertFalse(app.staticTexts["Synchronization stopped"].exists)
+        screenshot(app, named: "offline-profile-setup")
+        app.buttons["profile.refresh"].tap()
+        XCTAssertTrue(app.buttons["health.setup.sync"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["health.setup.sync"].isEnabled)
+        XCTAssertFalse(app.staticTexts["Profile not found. Choose your profile to continue."].exists)
+        app.navigationBars.buttons["Close"].tap()
+        XCTAssertTrue(app.buttons["health.stop"].waitForExistence(timeout: 5))
+        app.buttons["automatic.open"].tap()
+        for _ in 0 ..< 5 where !app.switches["automatic.enable"].exists { app.swipeUp() }
+        XCTAssertEqual(app.switches["automatic.enable"].value as? String, "1")
     }
 
     @MainActor

@@ -32,6 +32,7 @@
 "profile.none" = "No hay perfiles disponibles. Revisa tus conexiones compartidas en LibreLinkUp.";
 "profile.current" = "Perfil";
 "profile.unavailable" = "Perfil no disponible";
+"profile.detailsUnavailable" = "Datos del perfil sin cargar";
 "profile.refresh" = "Actualizar perfiles";
 "profile.switch" = "Cambiar de perfil";
 "profile.switchConfirm" = "¿Cambiar de perfil?";
@@ -48,6 +49,8 @@
 "health.sync.stop" = "Detener sincronización";
 "health.sync.paused" = "Sincronización detenida";
 "health.sync.profileMissing" = "No se encuentra el perfil. Selecciona tu perfil para continuar.";
+"health.sync.profileUnavailable" = "Los datos del perfil no están disponibles. Actualiza los perfiles cuando tengas conexión.";
+"health.sync.profileRetryDetail" = "Abre la configuración de Salud para volver a intentarlo. Tus ajustes de sincronización no cambian.";
 "health.sync.permissionOff" = "El permiso de Salud está desactivado. Permite guardar glucosa para continuar.";
 "health.sync.working" = "Lista para sincronizar manualmente";
 "health.sync.resumeDetail" = "La sincronización está detenida. Abre la configuración de Salud para continuar.";

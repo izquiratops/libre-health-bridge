@@ -151,6 +151,8 @@ struct HomeView: View {
                 model.isSignedIn
                     ? (readyForSync
                         ? "sync.explanation"
+                        : model.selectedPatientID != nil && model.profileLookup != .loaded
+                        ? "health.sync.profileRetryDetail"
                         : model.session?.syncPaused == true
                         ? "health.sync.resumeDetail" : "checklist.sync.setupDetail")
                     : "checklist.intro"

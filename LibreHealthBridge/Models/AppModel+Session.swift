@@ -39,6 +39,7 @@ extension AppModel {
             restoration = .loaded
             api = client
             connections = available
+            profileLookup = .loaded
             // A graph error must not keep the password in the login form after successful login.
             if saved.selectedPatientID != nil {
                 do { try await fetchPreview(refreshConnections: false) } catch {
@@ -54,7 +55,8 @@ extension AppModel {
             guard var saved = session, saved.selectedPatientID != id else {
                 return
             }
-            guard connections.contains(where: { $0.patientId == id }) else {
+            guard profileLookup == .loaded,
+                  connections.contains(where: { $0.patientId == id }) else {
                 throw CloudError.missingConnection
             }
             saved.selectedPatientID = id
@@ -90,6 +92,7 @@ extension AppModel {
             reconcileAutomatic()
             restoration = .idle
             connections = []
+            profileLookup = .notLoaded
             snapshot = nil
             isPreviewCurrent = false
         }
@@ -103,7 +106,16 @@ extension AppModel {
     ) async throws {
         guard let api, let saved = session else { return }
         do {
-            if refreshConnections { connections = try await api.connections() }
+            if refreshConnections {
+                do {
+                    let available = try await api.connections()
+                    connections = available
+                    profileLookup = .loaded
+                } catch {
+                    profileLookup = .unavailable
+                    throw error
+                }
+            }
             guard let id = saved.selectedPatientID else { return }
             guard
                 let connection = connections.first(where: { $0.patientId == id }

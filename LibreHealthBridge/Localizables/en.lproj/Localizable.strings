@@ -32,6 +32,7 @@
 "profile.none" = "No profiles available. Check your shared connections in LibreLinkUp.";
 "profile.current" = "Profile";
 "profile.unavailable" = "Profile unavailable";
+"profile.detailsUnavailable" = "Profile details not loaded";
 "profile.refresh" = "Refresh profiles";
 "profile.switch" = "Switch profile";
 "profile.switchConfirm" = "Switch profile?";
@@ -48,6 +49,8 @@
 "health.sync.stop" = "Stop synchronization";
 "health.sync.paused" = "Synchronization stopped";
 "health.sync.profileMissing" = "Profile not found. Choose your profile to continue.";
+"health.sync.profileUnavailable" = "Profile details unavailable. Refresh profiles when connected.";
+"health.sync.profileRetryDetail" = "Open Health setup to retry. Your sync settings are unchanged.";
 "health.sync.permissionOff" = "Health permission is off. Enable glucose writes to continue.";
 "health.sync.working" = "Ready for manual sync";
 "health.sync.resumeDetail" = "Synchronization is stopped. Open Health setup to continue.";

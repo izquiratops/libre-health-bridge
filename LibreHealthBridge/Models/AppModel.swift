@@ -44,6 +44,11 @@ enum RestorationState {
     case idle, loading, loaded, retryableFailure
 }
 
+// A failed discovery is not proof that a saved patient is absent.
+enum ProfileLookupState {
+    case notLoaded, unavailable, loaded
+}
+
 protocol CloudAPI: Sendable {
     func connections() async throws -> [Connection]
     func snapshot(for connection: Connection, now: Date?) async throws -> CloudSnapshot
@@ -56,6 +61,7 @@ extension LibreCloudClient: CloudAPI {}
 final class AppModel {
     var session: SavedSession?
     var connections: [Connection] = []
+    var profileLookup: ProfileLookupState = .notLoaded
     var snapshot: CloudSnapshot?
     var isBusy = false
     var errorMessage: String?
@@ -107,7 +113,8 @@ final class AppModel {
     var isSignedIn: Bool { session != nil }
     var selectedPatientID: String? { session?.selectedPatientID }
     var selectedConnection: Connection? {
-        connections.first { $0.patientId == selectedPatientID }
+        guard profileLookup == .loaded else { return nil }
+        return connections.first { $0.patientId == selectedPatientID }
     }
     var isVerified: Bool {
         guard let selectedPatientID else { return false }
@@ -131,6 +138,9 @@ final class AppModel {
     }
 
     var healthSyncStatus: String {
+        if selectedPatientID != nil && profileLookup != .loaded {
+            return "health.sync.profileUnavailable"
+        }
         if selectedConnection == nil { return "health.sync.profileMissing" }
         if !isVerified { return "checklist.sync.inactive" }
         if healthAccess != .authorized { return "health.sync.permissionOff" }

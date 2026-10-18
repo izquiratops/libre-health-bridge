@@ -44,6 +44,8 @@ private final class FakeWriter: GlucoseWriter {
 private actor FixtureTransport: CloudTransport {
     var failConnections = false
     var emptyConnections = false
+    var omitPatientB = false
+    var reverseConnections = false
     var failGraph = false
     var retryAfter: Date?
     var termsRequired = false
@@ -55,6 +57,8 @@ private actor FixtureTransport: CloudTransport {
     private var pending: CheckedContinuation<Void, any Error>?
     func setConnectionsFailure(_ value: Bool) { failConnections = value }
     func setEmptyConnections(_ value: Bool) { emptyConnections = value }
+    func setOmitPatientB(_ value: Bool) { omitPatientB = value }
+    func setReverseConnections(_ value: Bool) { reverseConnections = value }
     func setGraphFailure(_ value: Bool) { failGraph = value }
     func setRetryAfter(_ date: Date?) { retryAfter = date }
     func setTermsRequired(_ value: Bool) { termsRequired = value }
@@ -75,13 +79,15 @@ private actor FixtureTransport: CloudTransport {
             body = #"{"status":0,"data":{"user":{"id":"user"},"authTicket":{"token":"token"}}}"#
         case "/llu/connections":
             if failConnections { throw CloudError.network }
-            body = emptyConnections ? #"{"status":0,"data":[]}"# :
-                """
-                {"status":0,"data":[{"patientId":"patient-a","firstName":"Alex",\
-                "glucoseMeasurement":{"FactoryTimestamp":"02/18/2026 11:55:00 AM",\
-                "ValueInMgPerDl":\(glucoseValue),"isHigh":false,"isLow":false}},\
-                {"patientId":"patient-b","firstName":"Blair"}]}
-                """
+            let firstProfile = """
+            {"patientId":"patient-a","firstName":"Alex",\
+            "glucoseMeasurement":{"FactoryTimestamp":"02/18/2026 11:55:00 AM",\
+            "ValueInMgPerDl":\(glucoseValue),"isHigh":false,"isLow":false}}
+            """
+            let secondProfile = #"{"patientId":"patient-b","firstName":"Blair"}"#
+            let profiles = emptyConnections ? "" : omitPatientB ? firstProfile :
+                reverseConnections ? "\(secondProfile),\(firstProfile)" : "\(firstProfile),\(secondProfile)"
+            body = "{\"status\":0,\"data\":[\(profiles)]}"
         case "/llu/connections/patient-a/graph", "/llu/connections/patient-b/graph":
             graphRequests += 1
             if holdGraph { try await withCheckedThrowingContinuation { pending = $0 } }
@@ -269,6 +275,43 @@ private final class RecordingHealthStore: GlucoseHealthStore {
     #expect(backend.saves == 0)
 }
 
+@Test @MainActor func offlineColdLaunchAndHomeActionRetainConfigurationUntilRecovery() async throws {
+    let store = MemoryStore()
+    var saved = session(selected: "patient-b", verified: "patient-b")
+    let completed = Date(timeIntervalSince1970: 2_000_000_000)
+    saved.lastSync = completed
+    saved.automaticEnabled = true
+    store.saved = saved
+    let health = FakeWriter()
+    let transport = FixtureTransport()
+    await transport.setConnectionsFailure(true)
+    let app = model(store, health, transport)
+
+    await app.restore()
+    #expect(app.restoration == .retryableFailure)
+    #expect(app.healthSyncStatus == "health.sync.profileUnavailable")
+    #expect(app.selectedPatientID == "patient-b")
+    #expect(app.isVerified)
+    #expect(app.session?.syncPaused == false)
+    #expect(app.session?.automaticEnabled == true)
+    #expect(app.automaticStatus == "automatic.deferred")
+    #expect(app.session?.lastSync == completed)
+    #expect(await app.primaryHealthAction() == .openSetup)
+    #expect(store.saved?.syncPaused == false)
+    #expect(store.saved?.automaticEnabled == true)
+    #expect(store.saved?.lastSync == completed)
+    #expect(await app.sync() == .failure)
+    #expect(health.writes == 0)
+    #expect(store.saved?.lastSync == completed)
+
+    await transport.setConnectionsFailure(false)
+    await app.refresh()
+    #expect(app.restoration == .loaded)
+    #expect(app.selectedConnection?.patientId == "patient-b")
+    #expect(app.isHealthSyncActive)
+    #expect(store.saved?.automaticEnabled == true)
+}
+
 @Test @MainActor func restoreFailureCanRetryWithoutRestart() async {
     let store = MemoryStore()
     store.saved = session()
@@ -294,6 +337,59 @@ private final class RecordingHealthStore: GlucoseHealthStore {
     #expect(!app.isVerified)
     #expect(store.saved?.verifiedPatientID == nil)
     #expect(app.selectedPatientID == "patient-b")
+}
+
+@Test @MainActor func savedPatientSurvivesReorderingRefreshFailureAndRestart() async {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-b", verified: "patient-b")
+    let transport = FixtureTransport()
+    let health = FakeWriter()
+    let app = model(store, health, transport)
+    await app.restore()
+    #expect(app.selectedConnection?.patientId == "patient-b")
+    await transport.setReverseConnections(true)
+    await app.refresh()
+    #expect(app.connections.first?.patientId == "patient-b")
+    #expect(app.selectedConnection?.patientId == "patient-b")
+    await transport.setConnectionsFailure(true)
+    await app.refresh()
+    #expect(app.healthSyncStatus == "health.sync.profileUnavailable")
+    #expect(app.selectedPatientID == "patient-b")
+    #expect(store.saved?.verifiedPatientID == "patient-b")
+    #expect(app.snapshot != nil)
+    #expect(!app.isPreviewCurrent)
+    #expect(await app.sync() == .failure)
+    #expect(health.writes == 0)
+    await transport.setConnectionsFailure(false)
+    let restarted = model(store, FakeWriter(), transport)
+    await restarted.restore()
+    #expect(restarted.selectedConnection?.patientId == "patient-b")
+    #expect(restarted.isVerified)
+}
+
+@Test @MainActor func verifiedMissingPatientRequiresExplicitSwitchAndFailedSaveKeepsSelection() async {
+    let store = MemoryStore()
+    store.saved = session(selected: "patient-b", verified: "patient-b")
+    let transport = FixtureTransport()
+    await transport.setOmitPatientB(true)
+    let app = model(store, FakeWriter(), transport)
+    await app.restore()
+    #expect(app.profileLookup == .loaded)
+    #expect(app.selectedConnection == nil)
+    #expect(app.healthSyncStatus == "health.sync.profileMissing")
+    #expect(app.selectedPatientID == "patient-b")
+    #expect(await app.sync() == .failure)
+    store.failSave = true
+    await app.selectConnection("patient-a")
+    #expect(app.selectedPatientID == "patient-b")
+    #expect(app.isVerified)
+    #expect(store.saved?.automaticEnabled == false)
+    store.failSave = false
+    await app.selectConnection("patient-a")
+    #expect(app.selectedPatientID == "patient-a")
+    #expect(!app.isVerified)
+    #expect(store.saved?.syncPaused == true)
+    #expect(store.saved?.automaticEnabled == false)
 }
 
 @Test @MainActor func firstSyncRequiresProfileConfirmationAndPermission() async {
@@ -702,7 +798,7 @@ private final class RecordingHealthStore: GlucoseHealthStore {
     var payload = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
     payload["automaticInterval"] = 7
     let corrupted = try JSONDecoder().decode(SavedSession.self,
-        from: JSONSerialization.data(withJSONObject: payload))
+                                             from: JSONSerialization.data(withJSONObject: payload))
     #expect(corrupted.automaticInterval == 30)
     let store = MemoryStore(); store.saved = decoded
     let app = automaticFixture(store, PremiumFixture(), SchedulerFixture(), { .now })
@@ -770,7 +866,7 @@ private final class CompletionProbe: @unchecked Sendable {
     let probe = CompletionProbe()
     let completion = RefreshCompletion { probe.record($0) }
     await withTaskGroup(of: Void.self) { group in
-        for _ in 0..<32 {
+        for _ in 0 ..< 32 {
             group.addTask { completion.finish(true) }
             group.addTask {
                 if completion.reserveExpiration() { completion.finishExpiration() }
@@ -1148,7 +1244,7 @@ private final class CompletionProbe: @unchecked Sendable {
         for (error, english, spanish) in messages {
             let key = try #require(error.errorDescription)
             #expect(bundle.localizedString(forKey: key, value: nil, table: nil)
-                    == (language == "en" ? english : spanish))
+                == (language == "en" ? english : spanish))
         }
     }
 }

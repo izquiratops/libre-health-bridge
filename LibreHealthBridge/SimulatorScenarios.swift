@@ -13,6 +13,7 @@ enum SimulatorScenarios {
         case signedOut = "signed-out"
         case ready, setup, error
         case noProfiles = "no-profiles", missingProfile = "missing-profile"
+        case offlineColdLaunch = "offline-cold-launch"
         case multipleProfiles = "multiple-profiles"
         case noReading = "no-reading", staleReading = "stale-reading"
         case permissionDenied = "permission-denied", healthUnavailable = "health-unavailable"
@@ -63,21 +64,22 @@ enum SimulatorScenarios {
         switch scenario {
         case .permissionDenied: access = .denied
         case .healthUnavailable: access = .unavailable
-        case .ready, .paused, .error, .missingProfile, .multipleProfiles, .noReading, .staleReading,
+        case .ready, .paused, .error, .missingProfile, .offlineColdLaunch, .multipleProfiles, .noReading, .staleReading,
              .premiumReady, .premiumRefreshOff, .premiumAttention,
              .termsRequired, .rateLimited, .wrongPatient, .invalidCredentials,
              .invalidResponse, .secureStorage, .healthSave: access = .authorized
         case .signedOut, .setup, .premiumSetup, .noProfiles, nil: access = .notRequested
         }
         let backend = ScenarioHealthStore(access: access, failsSave: scenario == .healthSave)
+        let connectivity = ScenarioConnectivity()
         let model = AppModel(sessionStore: store, health: HealthWriter(backend: backend), makeClient: { credentials in
-            ScenarioClient(credentials: credentials, scenario: scenario)
+            ScenarioClient(credentials: credentials, scenario: scenario, connectivity: connectivity)
         }, premium: ScenarioPremiumStore(owned: [.premiumReady, .premiumSetup, .premiumRefreshOff,
-                                                  .premiumAttention].contains(scenario)),
-           scheduler: ScenarioRefreshScheduler(),
-           backgroundRefreshAvailable: { scenario != .premiumRefreshOff &&
-               UIApplication.shared.backgroundRefreshStatus == .available })
-        model.restoration = .loaded
+                                                 .premiumAttention, .offlineColdLaunch].contains(scenario)),
+        scheduler: ScenarioRefreshScheduler(),
+        backgroundRefreshAvailable: { scenario != .premiumRefreshOff &&
+            UIApplication.shared.backgroundRefreshStatus == .available })
+        model.restoration = scenario == .offlineColdLaunch ? .idle : .loaded
         model.refreshHealthAccess()
         guard let scenario else {
             model.errorMessage = model.safeMessage(CloudError.invalidResponse)
@@ -87,16 +89,21 @@ enum SimulatorScenarios {
         let ready = scenario != .setup && scenario != .premiumSetup && scenario != .noProfiles &&
             scenario != .noReading && scenario != .staleReading
         var saved = SavedSession(credentials: credentials,
-            selectedPatientID: scenario == .noProfiles ? nil : patientID,
-            verifiedPatientID: ready ? patientID : nil,
-            lastSync: ready ? completedAt : nil,
-            syncPaused: !ready || scenario == .paused)
-        if scenario == .premiumRefreshOff || scenario == .premiumAttention {
+                                 selectedPatientID: scenario == .noProfiles ? nil : patientID,
+                                 verifiedPatientID: ready ? patientID : nil,
+                                 lastSync: ready ? completedAt : nil,
+                                 syncPaused: !ready || scenario == .paused)
+        if scenario == .premiumRefreshOff || scenario == .premiumAttention || scenario == .offlineColdLaunch {
             saved.automaticEnabled = true
             saved.automaticAttention = scenario == .premiumAttention
         }
         store.seed(saved)
+        if scenario == .offlineColdLaunch {
+            // Let foreground restoration read the saved session and fail discovery once.
+            return Composition(model: model, scenario: scenario)
+        }
         model.session = saved
+        model.profileLookup = .loaded
         model.connections = scenario == .noProfiles || scenario == .missingProfile ? [] :
             [ScenarioClient.connection(noReading: scenario == .noReading)] +
             (scenario == .multipleProfiles ? [ScenarioClient.secondConnection] : [])
@@ -173,9 +180,18 @@ private final class ScenarioHealthStore: GlucoseHealthStore {
     }
 }
 
+private actor ScenarioConnectivity {
+    private var requests = 0
+    func shouldFailInitialDiscovery() -> Bool {
+        requests += 1
+        return requests == 1
+    }
+}
+
 private struct ScenarioClient: CloudAPI {
     let credentials: Credentials
     let scenario: SimulatorScenarios.Scenario?
+    let connectivity: ScenarioConnectivity
 
     static func connection(noReading: Bool = false) -> Connection {
         let measurement = noReading ? "" :
@@ -190,7 +206,9 @@ private struct ScenarioClient: CloudAPI {
     }
 
     private var client: LibreCloudClient {
-        LibreCloudClient(credentials: credentials, transport: ScenarioTransport(scenario: scenario))
+        LibreCloudClient(credentials: credentials, transport: ScenarioTransport(
+            scenario: scenario, connectivity: connectivity
+        ))
     }
     func connections() async throws -> [Connection] { try await client.connections() }
     func snapshot(for connection: Connection, now: Date?) async throws -> CloudSnapshot {
@@ -200,12 +218,16 @@ private struct ScenarioClient: CloudAPI {
 
 private struct ScenarioTransport: CloudTransport {
     let scenario: SimulatorScenarios.Scenario?
+    let connectivity: ScenarioConnectivity
     func send(_ request: URLRequest) async throws -> HTTPResult {
         let body: String
         switch request.url?.path {
         case "/llu/auth/login":
             body = #"{"status":0,"data":{"user":{"id":"fixture-user"},"authTicket":{"token":"fixture-token"}}}"#
         case "/llu/connections":
+            if scenario == .offlineColdLaunch {
+                if await connectivity.shouldFailInitialDiscovery() { throw CloudError.network }
+            }
             let entry = scenario == .noReading ?
                 #"{"patientId":"fixture-patient-01","firstName":"Alex","lastName":"Rivera"}"# :
                 #"{"patientId":"fixture-patient-01","firstName":"Alex","lastName":"Rivera","glucoseMeasurement":{"FactoryTimestamp":"02/18/2026 11:55:00 AM","Timestamp":"02/18/2026 11:55:00 AM","ValueInMgPerDl":112,"isHigh":false,"isLow":false}}"#

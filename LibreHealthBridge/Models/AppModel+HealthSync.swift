@@ -56,6 +56,10 @@ extension AppModel {
         if isHealthSyncActive {
             return await sync() == .success ? .syncSucceeded : .stay
         }
+        // Discovery failure is not a consent change. Setup can offer a retry.
+        if selectedPatientID != nil && profileLookup != .loaded {
+            return .openSetup
+        }
         if isVerified && session?.syncPaused == false {
             guard await stopHealthSync() else { return .stay }
         }
@@ -75,7 +79,7 @@ extension AppModel {
             }
             if background {
                 guard ownership == .owned, protectedDataAvailable(),
-                    session?.automaticEnabled == true, session?.automaticAttention == false
+                      session?.automaticEnabled == true, session?.automaticAttention == false
                 else { throw CancellationError() }
             }
             if !background {
@@ -87,8 +91,8 @@ extension AppModel {
                 ownership = await premium.ownership()
                 refreshHealthAccess()
                 guard ownership == .owned, protectedDataAvailable(),
-                    session?.automaticEnabled == true, session?.automaticAttention == false,
-                    isHealthSyncActive else { throw CancellationError() }
+                      session?.automaticEnabled == true, session?.automaticAttention == false,
+                      isHealthSyncActive else { throw CancellationError() }
             }
             guard let snapshot, var saved = session,
                   saved.selectedPatientID == snapshot.patientID
