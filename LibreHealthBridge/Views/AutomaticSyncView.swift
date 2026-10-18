@@ -57,7 +57,8 @@ struct AutomaticSyncView: View {
                 Text(LocalizedStringKey(model.automaticStatus))
                     .accessibilityIdentifier("automatic.status")
                 if model.ownership == .owned && !model.isHealthSyncActive {
-                    Text("automatic.setupRequired")
+                    Text(model.selectedPatientID != nil && model.profileLookup != .loaded
+                        ? "health.sync.profileUnavailable" : "automatic.setupRequired")
                 }
                 if let message = model.automaticMessage {
                     Text(LocalizedStringKey(message))

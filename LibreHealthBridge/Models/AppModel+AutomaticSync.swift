@@ -5,7 +5,9 @@ import Foundation
 extension AppModel {
     var automaticStatus: String {
         guard session?.automaticEnabled == true else { return "automatic.off" }
-        if session?.automaticAttention == true || !isHealthSyncActive { return "automatic.attention" }
+        if session?.automaticAttention == true { return "automatic.attention" }
+        if selectedPatientID != nil && profileLookup != .loaded { return "automatic.deferred" }
+        if !isHealthSyncActive { return "automatic.attention" }
         if ownership != .owned || !protectedDataAvailable() { return "automatic.deferred" }
         if !backgroundRefreshAvailable() { return "automatic.refreshUnavailable" }
         if session?.automaticDeferred == true { return "automatic.deferred" }
@@ -156,16 +158,16 @@ extension AppModel {
         }
         refreshHealthAccess()
         guard protectedDataAvailable(), ownership == .owned,
-            session?.automaticEnabled == true, session?.automaticAttention == false,
-            session?.selectedPatientID != nil,
-            session?.verifiedPatientID == session?.selectedPatientID,
-            session?.syncPaused == false, healthAccess == .authorized
+              session?.automaticEnabled == true, session?.automaticAttention == false,
+              session?.selectedPatientID != nil,
+              session?.verifiedPatientID == session?.selectedPatientID,
+              session?.syncPaused == false, healthAccess == .authorized
         else {
             let failure: AutomaticSyncFailure? = ownership == .owned && protectedDataAvailable()
                 && session?.automaticEnabled == true &&
                 (session?.verifiedPatientID != session?.selectedPatientID ||
-                 session?.selectedPatientID == nil || session?.syncPaused != false ||
-                 healthAccess != .authorized)
+                    session?.selectedPatientID == nil || session?.syncPaused != false ||
+                    healthAccess != .authorized)
                 ? .confirmationRequired : nil
             automaticAttemptFinished(.failure, failure: failure)
             return .failure

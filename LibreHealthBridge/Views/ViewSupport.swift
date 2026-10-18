@@ -76,7 +76,9 @@ func selectedProfileName(_ model: AppModel) -> String {
     }
     return String(
         localized: model.selectedPatientID == nil
-            ? "checklist.profile.inactive" : "profile.unavailable"
+            ? "checklist.profile.inactive"
+            : model.profileLookup == .loaded
+            ? "profile.unavailable" : "profile.detailsUnavailable"
     )
 }
 

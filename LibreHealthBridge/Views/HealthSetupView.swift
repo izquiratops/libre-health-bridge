@@ -12,6 +12,9 @@ struct HealthSetupView: View {
 
     private var readingStatusText: String {
         if model.canConfirmPreview && model.isVerified { return "reading.confirmed" }
+        if model.selectedPatientID != nil && model.profileLookup != .loaded {
+            return "reading.refreshRequired"
+        }
         if model.selectedConnection == nil { return "reading.chooseProfileFirst" }
         if model.snapshot != nil && !model.isPreviewCurrent {
             return "reading.refreshRequired"
@@ -184,7 +187,9 @@ struct HealthSetupView: View {
             profilePicker
 
             if model.selectedConnection == nil {
-                Text(model.connections.isEmpty
+                Text(model.selectedPatientID != nil && model.profileLookup != .loaded
+                    ? "health.sync.profileUnavailable"
+                    : model.connections.isEmpty && model.selectedPatientID == nil
                     ? "profile.none"
                     : model.selectedPatientID == nil
                     ? "profile.selectPrompt" : "health.sync.profileMissing")
@@ -249,7 +254,7 @@ struct HealthSetupView: View {
             .foregroundStyle(.primary)
         }
         .tint(Color.primary)
-        .disabled(model.connections.isEmpty)
+        .disabled(model.profileLookup != .loaded || model.connections.isEmpty)
         .accessibilityLabel(Text("profile.choose"))
         .accessibilityValue(selectedProfileName(model))
         .accessibilityIdentifier("profile.select")
